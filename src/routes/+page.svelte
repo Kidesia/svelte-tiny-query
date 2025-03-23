@@ -1,4 +1,8 @@
-<h1>Svelte Tiny Query</h1>
+<script lang="ts">
+	import { createQuery } from '$lib/index.js';
 
-<p>Create your package using @sveltejs/package and preview/showcase your work with SvelteKit</p>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+	const useFoo = createQuery(['foo'], async () => {
+		const response = await fetch('/api/foo');
+		return response.json();
+	});
+</script>

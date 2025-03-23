@@ -1,6 +1,6 @@
 import { untrack } from 'svelte';
 import createCache from './cache.svelte';
-import type { LoadResult } from './loadResult';
+import type { LoadResult } from './loadResult.ts';
 
 // Helpers
 
@@ -50,7 +50,7 @@ export function invalidateQuery(key: string[]) {
  * @param options The options
  * @returns A function to create the query
  */
-export function useQuery<E, P = void, T = unknown>(
+export function createQuery<E, P = void, T = unknown>(
 	key: string[] | ((queryParam: P) => string[]),
 	loadFn: (queryParam: P) => Promise<LoadResult<T, E>>,
 	options?: {

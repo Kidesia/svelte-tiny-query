@@ -1,58 +1,118 @@
-# create-svelte
+# Svelte Tiny Query 🦄
 
-Everything you need to build a Svelte library, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/main/packages/create-svelte).
+Svelte Tiny Query simplifies working with external data by allowing you to define queries and use them in your components. Under the hood it uses svelte 5 reactive state, which allows it to be so small (<2K gzipped).
 
-Read more about creating a library [in the docs](https://svelte.dev/docs/kit/packaging).
+Features
 
-## Creating a project
+- 📥 Declarative queries
+- 🚀 Reactive params
+- 💾 Caching query results
+- 🏃 Reloading data (when appropriate)
+- ‼️ Deduping reloads of the same query
+- 🚧 Invalidating queries
+- 💥 Loading and error states
+- 🤓 Fully Typescript
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Usage
 
-```bash
-# create a new project in the current directory
-npx sv create
+In your svelte 5 project, install the dependency
 
-# create a new project in my-app
-npx sv create my-app
-```
+    npm install svelte-tiny-query --save
 
-## Developing
+And off you go
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+~~~svelte
+<script>
+  import { createQuery } from "svelte-tiny-query";
 
-```bash
-npm run dev
+  // create a query (probably in another file)
+  const useFriends = createQuery(
+    ["friends"],
+    async () => {
+      try {
+        const friends = fetchFriends();
+        return { success: true, data: friends };
+      } catch (e) {
+        return { success: false, error: "oopsie" };
+      }
+    }
+  )
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+  // use the query (returns data, loading and error)
+  const { query } = useFriends();
+</script>
 
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
+{#if query.loading}
+  loading...
+{:else if query.error}
+  {query.error}
+{:else if query.data}
+  {query.data.join(", ")}
+{/if}
+~~~
 
-## Building
+## Queries
 
-To build your library:
+A query is a simple abstraction that ties together a loading function and its loaded data. Each query is uniquely identified by a key, which is used for caching the data and invalidating the query.
 
-```bash
-npm run package
-```
+### Creating a Query
 
-To create a production version of your showcase app:
+To create a query you use the `createQuery` function.
 
-```bash
-npm run build
-```
+It has three parameters
 
-You can preview the production build with `npm run preview`.
+- key `string[] | (P) => string[]`
+- loadFn `(param: P) => LoadResult<T, E>`
+- options `{ initialData?: T, staleTime?: number }`
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+and returns a query function
 
-## Publishing
+- returns `(param: P) => { query: { data: T | undefined, error: E | undefined, loading: boolean }, refetch: () => void }`
 
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
+~~~javascript
+const useFriends = createQuery(
+  ['friends'],
+  async () => {
+    try {
+      const data = await fetchFriends();
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error };
+    }
+  }
+);
+~~~
 
-To publish your library to [npm](https://www.npmjs.com):
+### Query Key
 
-```bash
-npm publish
-```
+The key of a query is used for caching the data. In order to identify nested or hierarchical data, the key is a `string[]`. It has to be unique, otherwise different queries will overwrite each others data.
+
+The key can also be a function of type `(param: P) => string[]`. This allows the key to be based on the params of the query.
+
+If the key is not a function, but the query takes a parameter, the param is serialized and added as the last key fragment.
+
+### Loading Function
+
+The loading function is invoked whenever the query is first used and subsequently, when its (reactive) param changes or when its `refetch` function is called.
+
+It is an asynchronous function that takes one argument and returns a promise of either a `{ success: true, data }` or a `{ success: false, error }` object. To construct these objects you can also use the `succeed` and `fail` functions which are provided.
+
+~~~javascript
+const useFriend = createQuery(
+  ({ id }) => ["friend", `${id}`],
+  async ({ id }: { id: number}) => {
+    try {
+      const data = await fetchFriend(id);
+      return succeed(data);
+    } catch (error) {
+      return fail(error);
+    }
+  }
+);
+~~~
+
+### The Query itself
+
+Once you created a query, its time to use it. Invoke it and you get access to its loadingstate, data and errors. It will load right away, but if you want to manually trigger a reload down the line, you can use the refetch function, which is also provided.
+
+[WIP]
