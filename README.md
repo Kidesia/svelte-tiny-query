@@ -1,8 +1,8 @@
 # Svelte Tiny Query 🦄
 
-**Svelte Tiny Query 🦄** simplifies working with external data in Svelte 5. Define declarative queries that handle caching, deduping, reloading, and give you reactive access to data, loading, and error states.
+**Svelte Tiny Query 🦄** simplifies working with external data in Svelte 5. Define declarative queries that handle caching, deduping, and reloading — with reactive access to `data`, `loading`, and `error` states.
 
-Svelte 5's built-in reactivity does most of the heavy lifting under the hood. This allows **Svelte Tiny Query 🦄** to be very simple and small - *tiny*, you might say - at 1.7kB gzipped.
+Built on Svelte 5's `$state`, it’s tiny (1.7kB gzipped), fast, and fully type-safe.
 
 **Features**
 

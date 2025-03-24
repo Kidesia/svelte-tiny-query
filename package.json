@@ -22,6 +22,7 @@
 	"svelte": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"type": "module",
+	"module": "./dist/index.js",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
