@@ -21,8 +21,8 @@ function generateKey<T>(baseKey: string[] | ((params: T) => string[]), queryPara
 
 // State
 
-export const globalLoading = $state({ loadingCount: 0 });
-export const queriesCache = createCache('querie-caches');
+export const globalLoading = $state({ count: 0 });
+export const queriesCache = createCache('queries-cache');
 export const loadingCache = createCache('loading-cache');
 export const errorCache = createCache('error-cache');
 export const dataCache = createCache('data-cache');
@@ -34,7 +34,7 @@ export const dataCache = createCache('data-cache');
  * Invalidating makes queries reload, if they are currently active.
  * @param key The root path of the queries to invalidate.
  */
-export function invalidateQuery(key: string[]) {
+export function invalidateQueries(key: string[]) {
 	const queries = queriesCache.getValues(key);
 	for (const query of queries) {
 		if (query && typeof query === 'function') {
@@ -45,10 +45,10 @@ export function invalidateQuery(key: string[]) {
 
 /**
  * Creates a query function that can be used to load data.
- * @param key The path of the query
- * @param loadFn The function to load the data
- * @param options The options
- * @returns A function to create the query
+ * @param key Path of the query
+ * @param loadFn Function to load the data
+ * @param options Options for the query
+ * @returns Query function to use in Svelte components
  */
 export function createQuery<E, P = void, T = unknown>(
 	key: string[] | ((queryParam: P) => string[]),
@@ -103,7 +103,7 @@ export function createQuery<E, P = void, T = unknown>(
 		untrack(() => {
 			loadingCache.setValue(cacheKey, true);
 			errorCache.removeValue(cacheKey);
-			globalLoading.loadingCount++;
+			globalLoading.count++;
 		});
 
 		const loadResult = await loadFn(queryParam);
@@ -115,7 +115,7 @@ export function createQuery<E, P = void, T = unknown>(
 
 		untrack(() => {
 			loadingCache.removeValue(cacheKey);
-			globalLoading.loadingCount--;
+			globalLoading.count--;
 		});
 	};
 
@@ -123,8 +123,6 @@ export function createQuery<E, P = void, T = unknown>(
 		const { internal, query } = initializeState();
 
 		$effect(() => {
-			// Runs initially and whenever the queryParam changes
-
 			const cacheKey = generateKey(key, queryParam);
 			internal.currentKey = cacheKey;
 

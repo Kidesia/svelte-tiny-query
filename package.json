@@ -1,6 +1,10 @@
 {
 	"name": "svelte-tiny-query",
 	"version": "0.0.3",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/sra448/svelte-simple-query.git"
+	},
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run prepack",
@@ -58,7 +62,9 @@
 		"vitest": "^3.0.0"
 	},
 	"keywords": [
-		"svelte"
+		"svelte",
+		"query",
+		"cache"
 	],
 	"pnpm": {
 		"onlyBuiltDependencies": [
