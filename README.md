@@ -1,118 +1,163 @@
 # Svelte Tiny Query 🦄
 
-Svelte Tiny Query simplifies working with external data by allowing you to define queries and use them in your components. Under the hood it uses svelte 5 reactive state, which allows it to be so small (<2K gzipped).
+**Svelte Tiny Query 🦄** simplifies working with external data in Svelte 5. Define declarative queries that handle caching, deduping, reloading, and give you reactive access to data, loading, and error states.
 
-Features
+Svelte 5's built-in reactivity does most of the heavy lifting under the hood. This allows **Svelte Tiny Query 🦄** to be very simple and small - *tiny*, you might say - at 1.7kB gzipped.
 
-- 📥 Declarative queries
-- 🚀 Reactive params
-- 💾 Caching query results
-- 🏃 Reloading data (when appropriate)
-- ‼️ Deduping reloads of the same query
-- 🚧 Invalidating queries
-- 💥 Loading and error states
-- 🤓 Fully Typescript
+**Features**
+
+- 🚀 Declarative and reactive queries
+- 💾 Caching with stale-time support
+- 🏃 Auto and manual reloading
+- 💥 Loading and error state tracking
+- ‼️ Deduplication of identical loads
+- 🚧 Easy query invalidation
+- ⌨️ Fully typed with TypeScript
 
 ## Usage
 
-In your svelte 5 project, install the dependency
+In your svelte 5 project, install **Svelte Tiny Query 🦄**
 
     npm install svelte-tiny-query --save
 
 And off you go
 
-~~~svelte
+~~~html
 <script>
-  import { createQuery } from "svelte-tiny-query";
+  import { createQuery } from 'svelte-tiny-query';
 
-  // create a query (probably in another file)
-  const useFriends = createQuery(
-    ["friends"],
-    async () => {
+  const memeIdeaQuery = createQuery(
+    ['meme-ideas'],
+    async ({ id }) => {
       try {
-        const friends = fetchFriends();
-        return { success: true, data: friends };
+        const memeIdea = await fetchDataSomehow(id);
+        return { success: true, data: memeIdea };
       } catch (e) {
-        return { success: false, error: "oopsie" };
+        return { success: false, error: 'Oopsie!' };
       }
     }
-  )
+  );
 
-  // use the query (returns data, loading and error)
-  const { query } = useFriends();
+  const queryParam = $state({ id: 1 });
+
+  const { query } = memeIdeaQuery(queryParam);
 </script>
 
 {#if query.loading}
-  loading...
+  <p>Loading...</p>
 {:else if query.error}
-  {query.error}
-{:else if query.data}
-  {query.data.join(", ")}
+  <p>Error: {query.error}</p>
+{:else}
+  <h1>{query.data.title}</h1>
 {/if}
+
+<button onclick={() => {
+  queryParam.id += 1
+}}>
+  Next Meme Idea
+</button>
 ~~~
 
-## Queries
+## Queries and Keys
 
-A query is a simple abstraction that ties together a loading function and its loaded data. Each query is uniquely identified by a key, which is used for caching the data and invalidating the query.
+A query is a simple abstraction that ties together a loading function and its loaded data. Each query is **uniquely identified by a key 🔑**, which is used for caching the data and invalidating the query.
 
-### Creating a Query
+Once you create a query (using `createQuery`), the query itself is just a function which, when called, initializes the query and returns its reactive state (`data`, `error` and `loading`), as well as a `refetch` function.
 
-To create a query you use the `createQuery` function.
+When a query is initialized, it sets its data, error and loading properties to the respective values found in the cache (using the queries key). Also when initializing, unless the query has data from the cache that is not yet stale, the queries loading function is triggered.
 
-It has three parameters
+When your queries cache is updated (from invalidation or another usage of that same query), the query automatically updates its properties - they are reactive. This also means, that when a query is reloading, the `loading` property of that query in all instances changes to true, not only the query that actually triggered the reload.
 
-- key `string[] | (P) => string[]`
-- loadFn `(param: P) => LoadResult<T, E>`
-- options `{ initialData?: T, staleTime?: number }`
+A query can also accept a **reactive parameter**. If a query is passed a reactive parameter and its value changes, the query is simple re-initialized (redoing the steps outlined above).
 
-and returns a query function
+## API Reference
 
-- returns `(param: P) => { query: { data: T | undefined, error: E | undefined, loading: boolean }, refetch: () => void }`
+**Svelte Tiny Query 🦄** only exports 4 functions: `createQuery`, `invalidateQueries`, `fail` and `succeed`.
 
-~~~javascript
-const useFriends = createQuery(
-  ['friends'],
-  async () => {
-    try {
-      const data = await fetchFriends();
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error };
-    }
+### createQuery
+
+Creates a query, which then can be used in components.
+
+~~~typescript
+(
+  key: string[] | (P) => string[],
+  loadFn: (param: P) => LoadResult<T, E>,
+  options?: { initialData?: T, staleTime?: number }
+) =>
+  (param: P) => {
+    query: {
+      data: T | undefined,
+      error: E | undefined,
+      loading: boolean
+    },
+    refetch: () => void
   }
-);
 ~~~
 
-### Query Key
+Let's break it down.
 
-The key of a query is used for caching the data. In order to identify nested or hierarchical data, the key is a `string[]`. It has to be unique, otherwise different queries will overwrite each others data.
+#### Param 1: Key
 
-The key can also be a function of type `(param: P) => string[]`. This allows the key to be based on the params of the query.
-
-If the key is not a function, but the query takes a parameter, the param is serialized and added as the last key fragment.
-
-### Loading Function
-
-The loading function is invoked whenever the query is first used and subsequently, when its (reactive) param changes or when its `refetch` function is called.
-
-It is an asynchronous function that takes one argument and returns a promise of either a `{ success: true, data }` or a `{ success: false, error }` object. To construct these objects you can also use the `succeed` and `fail` functions which are provided.
-
-~~~javascript
-const useFriend = createQuery(
-  ({ id }) => ["friend", `${id}`],
-  async ({ id }: { id: number}) => {
-    try {
-      const data = await fetchFriend(id);
-      return succeed(data);
-    } catch (error) {
-      return fail(error);
-    }
-  }
-);
+~~~typescript
+key: string[] | (P) => string[]
 ~~~
 
-### The Query itself
+The key of a query is used for caching and invalidating the query. To identify nested or hierarchical data, the key is a `string[]`. **It has to be unique‼️**, otherwise different queries will overwrite each others state.
 
-Once you created a query, its time to use it. Invoke it and you get access to its loadingstate, data and errors. It will load right away, but if you want to manually trigger a reload down the line, you can use the refetch function, which is also provided.
+If the key is a function, it gets passed the parameter of the query. This can be used to construct meaningful keys like `["user", "1", "posts"]`.
 
-[WIP]
+If the query has takes a parameter but the key is not a function, **the parameter is serialized and appended to the key**. This ensures that the key uniquely represents its data (and allows you to not worry to much about keys). In the example above, the actual initial key of the query is `["meme-ideas", "id:1"]`.
+
+#### Param 2: Loading Function
+
+~~~typescript
+loadFn: (param: P) => Promise<LoadResult<T, E>>
+~~~
+
+The loading function loads the data asynchronously. Its parameter P is the parameter, that is expected to be passed into the query. The loading function can only have one parameter (or none), and this parameter can be a reactive state. If the parameter is reactive, the query will re-initialize whenever its value changes.
+
+The return type of the loading function is a `LoadResult`, which is defined as `{ success: true, data: T } | { success: false, error: E }`. You can use the helper functions `succeed` and `fail` to construct these values.
+
+#### Param 3: Options (optional)
+
+~~~typescript
+options?: {
+  initialData: undefined as T | undefined,
+  staleTime: 0 as number
+}
+~~~
+
+**initialData**
+
+The value is used as the initial value of `data` in the query, when it has not yet finished loading (instead of undefined). This can be used to implement persisted queries (maybe in localStorage), you just have to actually persist the data in the loading function.
+
+**staleTime**
+
+The amount of miliseconds before a query is considered stale. Before this time is reached, the query is not automatically reloaded. Defaults to 0 (query always reloads) and can also be set to infinity, to prevent reloads completely.
+
+#### Returns the actual query function
+
+~~~typescript
+(param: P) => {
+  query: {
+    data: T | undefined,
+    error: E | undefined,
+    loading: boolean
+  },
+  refetch: () => void
+}
+~~~
+
+The `createQuery` function returns the actual query function, which can be used to load the query and get access to its state.
+
+When the query is called, its data is set to a cached value based on the queries key. If the cache is empty, it is set to the content of `initialValue`, and if that is also not set, the data is undefined.
+
+If there is no data found in the cache, or the cached data is already stale, the loading function is immediately invoked and the loading state is set to true for the duration of the loading function.
+
+When the loading function returns a value or an error, the query is updated accordingly. These values are now cached and any later usage of the same query will see its cached data immediately. The error value is reset when the query reloads.
+
+If the parameter of the query function is reactive and its value changes, the query now represents a new key and re-initializes, repeating the steps above.
+
+### invalidateQuery
+
+
