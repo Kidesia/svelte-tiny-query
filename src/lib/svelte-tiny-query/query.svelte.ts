@@ -1,6 +1,10 @@
 import { untrack } from 'svelte';
-import createCache from './cache.svelte';
-import type { LoadResult } from './loadResult.ts';
+
+// Types
+
+type LoadSuccess<T> = { success: true; data: T };
+type LoadFailure<E> = { success: false; error: E };
+type LoadResult<T, E> = LoadSuccess<T> | LoadFailure<E>;
 
 // Helpers
 
@@ -11,7 +15,10 @@ function generateKeyFragment(param: Record<string, unknown>) {
 		.join('|');
 }
 
-function generateKey<T>(baseKey: string[] | ((params: T) => string[]), queryParam: T) {
+function generateKey<T>(
+	baseKey: string[] | ((params: T) => string[]),
+	queryParam: T
+) {
 	return typeof baseKey === 'function'
 		? baseKey(queryParam)
 		: queryParam
@@ -19,29 +26,35 @@ function generateKey<T>(baseKey: string[] | ((params: T) => string[]), queryPara
 			: baseKey;
 }
 
-// State
-
-export const globalLoading = $state({ count: 0 });
-export const queriesCache = createCache('queries-cache');
-export const loadingCache = createCache('loading-cache');
-export const errorCache = createCache('error-cache');
-export const dataCache = createCache('data-cache');
-
-// Actions
+/**
+ * Constructs a LoadSuccess object.
+ * @param data The data to be represented.
+ * @returns A LoadSuccess object containing the data.
+ */
+export function succeed<T>(data: T): LoadSuccess<T> {
+	return { success: true, data };
+}
 
 /**
- * Invalidates queries hierarchically by key.
- * Invalidating makes queries reload, if they are currently active.
- * @param key The root path of the queries to invalidate.
+ * Constructs a LoadFailure object.
+ * @param error The error to be represented.
+ * @returns A LoadFailure object containing the error.
  */
-export function invalidateQueries(key: string[]) {
-	const queries = queriesCache.getValues(key);
-	for (const query of queries) {
-		if (query && typeof query === 'function') {
-			query();
-		}
-	}
+export function fail<E>(error: E): LoadFailure<E> {
+	return { success: false, error };
 }
+
+// State
+const queriesByKey = $state({} as Record<string, () => void>);
+const loadingByKey = $state({} as Record<string, boolean>);
+const dataByKey = $state({} as Record<string, unknown>);
+const errorByKey = $state({} as Record<string, unknown>);
+const staleTimeStampByKey = $state({} as Record<string, number>);
+const activeQueriesByKey = $state([] as string[][]);
+
+export const globalLoading = $state({ count: 0 });
+
+// Actions
 
 /**
  * Creates a query function that can be used to load data.
@@ -55,35 +68,32 @@ export function createQuery<E, P = void, T = unknown>(
 	loadFn: (queryParam: P) => Promise<LoadResult<T, E>>,
 	options?: {
 		initialData?: T;
+		staleTime?: number;
 	}
 ) {
-	const initializeState = () => {
-		const internal = $state({
-			currentKey: undefined as string[] | undefined
-		});
-
+	const initializeState = (currentKey: string) => {
+		const internal = $state({ currentKey });
 		const query = $state({
 			loading: false,
 			error: undefined as E | undefined,
-			data: options?.initialData
+			data: options?.initialData,
+			staleTimeStamp: undefined as number | undefined
 		});
 
 		$effect(() => {
-			if (internal.currentKey) {
-				query.data = dataCache.getValue(internal.currentKey) as T;
-			}
+			query.loading = !!loadingByKey[internal.currentKey];
 		});
 
 		$effect(() => {
-			if (internal.currentKey) {
-				query.loading = !!loadingCache.getValue(internal.currentKey);
-			}
+			query.data = dataByKey[internal.currentKey] as T;
 		});
 
 		$effect(() => {
-			if (internal.currentKey) {
-				query.error = errorCache.getValue(internal.currentKey) as E | undefined;
-			}
+			query.error = errorByKey[internal.currentKey] as E | undefined;
+		});
+
+		$effect(() => {
+			query.staleTimeStamp = staleTimeStampByKey[internal.currentKey];
 		});
 
 		return {
@@ -93,60 +103,74 @@ export function createQuery<E, P = void, T = unknown>(
 	};
 
 	const loadData = async (queryParam: P) => {
-		const cacheKey = generateKey(key, queryParam);
-
-		const alreadyLoading = untrack(() => loadingCache.getValue(cacheKey));
-		if (alreadyLoading) {
-			return;
-		}
+		const cacheKey = generateKey(key, queryParam).join('__');
 
 		untrack(() => {
-			loadingCache.setValue(cacheKey, true);
-			errorCache.removeValue(cacheKey);
+			errorByKey[cacheKey] = undefined;
+			loadingByKey[cacheKey] = true;
 			globalLoading.count++;
 		});
 
 		const loadResult = await loadFn(queryParam);
 		if (loadResult.success) {
-			dataCache.setValue(cacheKey, loadResult.data);
+			dataByKey[cacheKey] = loadResult.data;
 		} else {
-			errorCache.setValue(cacheKey, loadResult.error);
+			errorByKey[cacheKey] = loadResult.error;
 		}
 
 		untrack(() => {
-			loadingCache.removeValue(cacheKey);
+			staleTimeStampByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
+			loadingByKey[cacheKey] = false;
 			globalLoading.count--;
 		});
 	};
 
 	return (queryParam: P) => {
-		const { internal, query } = initializeState();
+		const cacheKey = generateKey(key, queryParam).join('__');
+		const { internal, query } = initializeState(cacheKey);
 
 		$effect(() => {
-			const cacheKey = generateKey(key, queryParam);
+			const currentKey = generateKey(key, queryParam);
+			const cacheKey = currentKey.join('__');
 			internal.currentKey = cacheKey;
 
 			untrack(() => {
-				const frozenQueryParam = $state.snapshot(queryParam) as P;
-				queriesCache.setValue(cacheKey, () => {
-					loadData(frozenQueryParam);
-				});
+				activeQueriesByKey.push(currentKey);
 			});
 
-			loadData(queryParam);
+			const frozenQueryParam = $state.snapshot(queryParam) as P;
+			const queryLoaderInstance = () => {
+				loadData(frozenQueryParam);
+			};
+
+			untrack(() => {
+				queriesByKey[cacheKey] = queryLoaderInstance;
+			});
+
+			const alreadyLoading = untrack(() => loadingByKey[cacheKey]);
+			const staleOrNew = untrack(() => {
+				const staleTime = staleTimeStampByKey[cacheKey];
+				return staleTime ? staleTime < +new Date() : true;
+			});
+
+			if (staleOrNew && !alreadyLoading) {
+				queryLoaderInstance();
+			}
 
 			return () => {
 				untrack(() => {
-					queriesCache.removeValue(cacheKey);
+					activeQueriesByKey.splice(
+						activeQueriesByKey.findIndex(
+							(activeKey) => activeKey.join('__') === currentKey.join('__')
+						),
+						1
+					);
 				});
 			};
 		});
 
 		const refetch = () => {
-			const query = queriesCache.getValue(generateKey(key, queryParam));
-			if (query && typeof query === 'function') {
-				query();
-			}
+			queriesByKey[internal.currentKey]?.();
 		};
 
 		return {
@@ -154,4 +178,37 @@ export function createQuery<E, P = void, T = unknown>(
 			refetch
 		};
 	};
+}
+
+/**
+ * Invalidates queries based on the provided key.
+ * This will cause the matching queries to be reloaded if they are currently active.
+ * @param key The key of the query to invalidate.
+ * @param options Options for invalidation
+ * @param options.force If true, forces the query to be invalidated even if it is not currently loading.
+ * @param options.exact If true, only invalidates queries that match the exact key. Otherwise, it will invalidate all queries that start with the provided key.
+ * @returns void
+ */
+export function invalidateQueries(
+	key: string[],
+	options?: { force?: boolean; exact?: boolean }
+) {
+	const cacheKey = key.join('__');
+	const queriesToInvalidate = activeQueriesByKey.filter((query) =>
+		options?.exact
+			? query.join('__') === cacheKey
+			: query.join('__').startsWith(cacheKey)
+	);
+
+	queriesToInvalidate.forEach((query) => {
+		const cacheKey = query.join('__');
+
+		if (options?.force) {
+			loadingByKey[cacheKey] = false;
+			dataByKey[cacheKey] = undefined;
+			errorByKey[cacheKey] = undefined;
+		}
+
+		queriesByKey[cacheKey]?.();
+	});
 }
