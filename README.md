@@ -8,11 +8,9 @@ Built on Svelte 5's reactivity, it’s *tiny* (~1.1kB gzipped), fast, and fully 
 
 - 🚀 Declarative and reactive queries
 - 💾 Caching with stale-time support
-- 🏃 Auto and manual reloading
-- 💥 Loading and error state tracking
-- ‼️ Deduplication of identical loads
+- 👬 Deduplication of identical loads
 - 🚧 Easy query invalidation
-- ⌨️ Fully typed with TypeScript
+- 🐍 Written in typescript
 
 ## Usage
 
@@ -99,10 +97,10 @@ Svelte Tiny Query only exports 2 functions (`createQuery` and `invalidateQueries
   }
 ~~~
 
-Creates a query, which then can be used in components.
+Creates a query function which can be invoked to get reactive access to the query state.
 
-- `T` is the type of the data that is returned by the loading function
-- `P` is the type of the parameter which is passed into the query function
+- `T` is the data that is returned by the loading function
+- `P` is the parameter which is passed into the query function
 - `E` is the error which might be returned by the loading function
 
 #### Param 1: Key
@@ -111,11 +109,11 @@ Creates a query, which then can be used in components.
 key: string[] | (P) => string[]
 ~~~
 
-The **key** of a query is crucial for caching and invalidating the query. It uniquely identifies the data, and it must be unique — otherwise, different queries may overwrite each other’s state.
+The **key** of a query is crucial for caching and invalidating the query. It must be unique — otherwise, different queries will overwrite each other’s state.
 
-- If the key is a function, it receives the query's parameter and returns an array of strings. This allows for dynamic keys, like `["user", "1", "posts"]`.
+- If the key is a *function*, it receives the query's parameter and returns an array of strings. This allows for nested keys like `["meme-ideas", "1", "comments"]`.
 
-- If the key is not a function but the query takes a parameter, the **parameter is serialized and appended to the key**. This guarantees that each key is unique and represents the query’s data correctly. In the example above, the key intially is `["meme-ideas", "id:1"]`.
+- If the key is not a function but the query takes a parameter, the **parameter is serialized and appended to the key**. In the example above, the key intially is `["meme-ideas", "id:1"]`.
 
 #### Param 2: Loading Function
 
@@ -123,7 +121,7 @@ The **key** of a query is crucial for caching and invalidating the query. It uni
 loadFn: (param: P) => Promise<LoadResult<T, E>>
 ~~~
 
-The **loading function** is responsible for loading data asynchronously. It accepts a parameter `P`, which is the value passed to the query. This parameter can be reactive, and if its value changes, the query will automatically re-initialize.
+An asychronous function that returns the new data or error. It accepts a parameter `P`, which is the value passed to the query. This parameter can be reactive, and if its value changes, the query will automatically re-initialize.
 
 The function returns a `LoadResult`, which can either be:
 
@@ -145,7 +143,7 @@ options?: {
 
 - **initialData**: This is used as the initial value of `data` before the query has finished loading (instead of undefined). Can be used to implement persisted queries.
 
-#### Returns the actual query function
+#### Return: The Query Function
 
 ~~~typescript
 (param: P) => {
@@ -170,7 +168,7 @@ The `createQuery` function returns a query function that gives you access to the
 
 - If the query has reactive parameters, a change will trigger a re-initialization, causing a reload based on the new cache key.
 
-### `invalidateQuery`
+### `invalidateQueries`
 
 ~~~typescript
 (key: string[]) => void
