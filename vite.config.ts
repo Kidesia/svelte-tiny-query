@@ -22,7 +22,6 @@ export default defineConfig({
 			},
 			{
 				extends: './vite.config.ts',
-
 				test: {
 					name: 'server',
 					environment: 'node',

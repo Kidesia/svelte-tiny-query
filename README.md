@@ -16,7 +16,7 @@ Built on Svelte 5's reactivity, it’s *tiny* (~1.1kB gzipped), fast, and fully 
 
 ## Usage
 
-In your svelte 5 project, install **Svelte Tiny Query**
+In your **Svelte 5 project**, install the library.
 
     npm install svelte-tiny-query --save
 
@@ -72,17 +72,20 @@ Queries can have one or zero parameters, and the parameter can be reactive. If i
 
 The key of a query has to uniquely identify the data that the query produces, and thus depends also on the parameters of the query. In Svelte Tiny Query, the parameter is automatically included in the final key, but you can also use a function to
 
+### When is a query reloaded?
+
+Each query is loaded when it is first used (unless there exists not yet stale cache data for it) and when its `refetch` function is used.
+
+
 ## API Reference
 
 Svelte Tiny Query only exports 2 functions (`createQuery` and `invalidateQueries`), 2 tiny helpers (`fail` and `succeed`) and one readonly state (`globalLoading`).
 
 ### `createQuery`
 
-Creates a query, which then can be used in components.
-
 ~~~typescript
 (
-  key: string[] | (P) => string[],
+  key: string[] | (param: P) => string[],
   loadFn: (param: P) => LoadResult<T, E>,
   options?: { initialData?: T, staleTime?: number }
 ) =>
@@ -96,7 +99,11 @@ Creates a query, which then can be used in components.
   }
 ~~~
 
-You can see 3 generic types in there. `T` is the type of the data that is returned by the loading functioin, `P` is the type of the parameter which is passed into the query function, and `E` is the error which might be returned by the loading function. Let's break it down.
+Creates a query, which then can be used in components.
+
+- `T` is the type of the data that is returned by the loading function
+- `P` is the type of the parameter which is passed into the query function
+- `E` is the error which might be returned by the loading function
 
 #### Param 1: Key
 
@@ -107,6 +114,7 @@ key: string[] | (P) => string[]
 The **key** of a query is crucial for caching and invalidating the query. It uniquely identifies the data, and it must be unique — otherwise, different queries may overwrite each other’s state.
 
 - If the key is a function, it receives the query's parameter and returns an array of strings. This allows for dynamic keys, like `["user", "1", "posts"]`.
+
 - If the key is not a function but the query takes a parameter, the **parameter is serialized and appended to the key**. This guarantees that each key is unique and represents the query’s data correctly. In the example above, the key intially is `["meme-ideas", "id:1"]`.
 
 #### Param 2: Loading Function
@@ -122,19 +130,20 @@ The function returns a `LoadResult`, which can either be:
 - `{ success: true, data: T }`
 - `{ success: false, error: E }`
 
-You can use the helper functions `succeed` and `fail` to easily construct these values.
+You can use the helper functions `succeed(data: T)` and `fail(error: E)` to easily construct these values.
 
 #### Param 3: Options (optional)
 
 ~~~typescript
 options?: {
-  initialData: undefined as T | undefined,
   staleTime: 0 as number
+  initialData: undefined as T | undefined,
 }
 ~~~
 
-- **initialData**: This is used as the initial value of `data` in the query, before it has finished loading (instead of undefined). Can be used to implement persisted queries (maybe in localStorage).
 - **staleTime**: Defines how long (in milliseconds) before the query is considered stale. Before this time is reached, the query is not automatically reloaded. Defaults to 0 (query always reloads) and can also be set to infinity, to prevent reloads completely.
+
+- **initialData**: This is used as the initial value of `data` before the query has finished loading (instead of undefined). Can be used to implement persisted queries.
 
 #### Returns the actual query function
 
@@ -181,26 +190,26 @@ Reactive value that holds the number of currently active loadings.
 
 ## What is Omited
 
-Svelte Tiny Query also deliberately omits some features that other query libraries offer. These are some of those:
+Svelte Tiny Query deliberately omits some features that other query libraries offer. Here are some of those:
 
-**Query Provider**:<br />
-There is no need to set up a query provider. Queries and their caches operate globally in your app.
+**Query Provider**<br />
+There is no need to set up a query provider. Queries and their caches are global in your app.
 
-**Timed and Window Focus Reloading**:<br />
+**Timed and Window Focus Reloading**<br />
 Use `$effect`, `setInterval` (or `addEventListener`) and `refetch` to achieve this yourself.
 
-**Dependent Queries**:<br />
-Use `$derived` to achieve dependent queries. But also consider extracting the part of the component that rely on the dependent query into its own component.
+**Dependent Queries**<br />
+Consider extracting the parts of the component that rely on the dependent query into its own component.
 
-**Persisted Queries**:<br />
+**Persisted Queries**<br />
 Use `initialData` and manually persist the data in the loading function.
 
-**Mutations**:<br />
+**Mutations**<br />
 Use `invalidateQueries` anywhere in your app to invalidate queries. This means mutations can just be normal functions.
 
 ## Roadmap
 
-While we want to keep the library *tiny*, there are a few things on our plate. If you feel like contributing to this project with issues or pull requests, you are very welcome.
+While we want to keep the library *tiny*, there are a few things on our plate.
 
 - Optimistic updates (`upateQuery`)
 - Retries on error
@@ -213,6 +222,6 @@ While we want to keep the library *tiny*, there are a few things on our plate. I
 
 This library exists, because **Svelte 5 is awesome**! It solves the problem of caching almost by itself and allows this library to be so *tiny* and simple.
 
-It also exists because of the (**TanStack Query**)[https://tanstack.com/query] (for which there exists a (svelte variant)[https://tanstack.com/query/latest/docs/framework/svelte/overview]) sparked the idea of the query abstraction in the first place. So thank you TanStack Query!
+Svelte Tiny Query is also very much inspired by [**TanStack Query**](https://tanstack.com/query) (for which there exists a [svelte variant](https://tanstack.com/query/latest/docs/framework/svelte/overview)).
 
-And last but not least, if you are still reading this, **thank you**! We hope you give it a try and consider contributing.
+And last but not least, if you are still reading this, thank you! We hope you give it a try and consider contributing.
