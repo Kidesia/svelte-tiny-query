@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createQuery } from '$lib/index.js';
-	import { fade } from 'svelte/transition';
+
+	const EMOJI = ['😵', '🙏', '👋', '🚽', '💃', '💎', '🚀', '🌙', '🎁'];
 
 	const formatHHMMSS = (date: Date) => {
 		return date.toLocaleTimeString('en-US', {
@@ -19,89 +20,80 @@
 				success: true,
 				data: {
 					id: param.id,
+					emoji: EMOJI[param.id % EMOJI.length],
 					fetchedAt: formatHHMMSS(new Date())
 				}
 			};
+		},
+		{
+			staleTime: 5000
 		}
 	);
 
 	const param = $state({ id: 1 });
 	const { query, refetch } = useMemeIdea(param);
-
-	$inspect({ query });
 </script>
 
-<div class="memes-container">
-	<h1>Meme Ideas</h1>
+<div class="emojis-container">
+	<h1>
+		Emoji #{param.id}
 
-	<div class="controls">
-		<button
-			onclick={() => {
-				param.id--;
-			}}
-		>
-			-
-		</button>
-		<button
-			onclick={() => {
-				param.id++;
-			}}
-		>
-			+
-		</button>
-	</div>
+		<button onclick={() => param.id--}> - </button>
+		<button onclick={() => param.id++}> + </button>
+	</h1>
 
-	<div class="meme">
-		{#if query.loading}
-			<div class="spinner" transition:fade>Loading...</div>
-		{/if}
-
+	<div class="emoji" class:loading={query.loading}>
 		{#if query.error}
 			<p>Error: {query.error}</p>
 		{/if}
 
 		{#if query.data}
-			<img src="https://picsum.photos/id/{200 + query.data.id}/200" alt="" />
-			<p>{query.data?.fetchedAt}</p>
+			<div class="content">{query.data.emoji}</div>
+			<div>
+				<div>id: {query.data.id}</div>
+				<div>time: {query.data.fetchedAt}</div>
+			</div>
 		{/if}
 
 		<button onclick={refetch}>Refetch</button>
+
+		{#if query.loading}
+			<div>Loading</div>
+		{/if}
 	</div>
 </div>
 
 <style>
-	.memes-container {
+	.emojis-container {
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
 		align-items: center;
+		gap: 0.5rem;
 		background-color: aliceblue;
 		border: 3px solid rgb(199, 196, 226);
 		border-radius: 1rem;
+		padding: 1rem;
+		font-family: system-ui;
+
+		> * {
+			margin: 0;
+		}
 	}
 
-	.controls {
-		display: flex;
-		gap: 1rem;
-	}
-
-	.meme {
-		position: relative;
-	}
-
-	.meme img {
-		width: 200px;
-		height: 200px;
-		background-color: aquamarine;
-		object-fit: cover;
-	}
-
-	.spinner {
-		position: absolute;
-		inset: 0;
+	h1 {
 		display: flex;
 		justify-content: center;
 		align-items: center;
-		background: white / 0.5;
+		gap: 0.5rem;
+	}
+
+	.loading {
+		opacity: 0.3;
+	}
+
+	.content {
+		font-size: 5rem;
+		text-align: center;
 	}
 </style>

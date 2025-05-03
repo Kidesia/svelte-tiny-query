@@ -5,8 +5,8 @@
 <main>
 	<section>
 		<MemeIdea />
-		<!-- <MemeIdea />
-		<MemeIdea /> -->
+		<MemeIdea />
+		<MemeIdea />
 	</section>
 </main>
 
