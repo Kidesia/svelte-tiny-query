@@ -21,13 +21,11 @@
 				data: {
 					id: param.id,
 					emoji: EMOJI[param.id % EMOJI.length],
-					fetchedAt: formatHHMMSS(new Date())
+					fetchedAt: new Date()
 				}
 			};
 		},
-		{
-			staleTime: 5000
-		}
+		{ staleTime: 30_000 }
 	);
 
 	const param = $state({ id: 1 });
@@ -36,11 +34,14 @@
 
 <div class="emojis-container">
 	<h1>
-		Emoji #{param.id}
-
-		<button onclick={() => param.id--}> - </button>
-		<button onclick={() => param.id++}> + </button>
+		Emoji&nbsp;#{param.id}
 	</h1>
+
+	<div class="flex">
+		<button onclick={refetch}>↻</button>
+		<button onclick={() => param.id--}>-</button>
+		<button onclick={() => param.id++}>+</button>
+	</div>
 
 	<div class="emoji" class:loading={query.loading}>
 		{#if query.error}
@@ -51,11 +52,17 @@
 			<div class="content">{query.data.emoji}</div>
 			<div>
 				<div>id: {query.data.id}</div>
-				<div>time: {query.data.fetchedAt}</div>
+				<div>time: {formatHHMMSS(query.data.fetchedAt)}</div>
+			</div>
+			<div>
+				staleTime:
+				{#if query.staleTimeStamp}
+					{formatHHMMSS(new Date(query.staleTimeStamp))}
+				{:else}
+					not
+				{/if}
 			</div>
 		{/if}
-
-		<button onclick={refetch}>Refetch</button>
 
 		{#if query.loading}
 			<div>Loading</div>
@@ -64,10 +71,17 @@
 </div>
 
 <style>
+	.flex {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
 	.emojis-container {
 		display: flex;
 		flex-direction: column;
-		justify-content: center;
+		justify-content: start;
 		align-items: center;
 		gap: 0.5rem;
 		background-color: aliceblue;
@@ -86,6 +100,7 @@
 		justify-content: center;
 		align-items: center;
 		gap: 0.5rem;
+		font-size: 1rem;
 	}
 
 	.loading {
@@ -95,5 +110,19 @@
 	.content {
 		font-size: 5rem;
 		text-align: center;
+	}
+
+	button {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		background-color: rgb(203, 226, 246);
+		border: none;
+		cursor: pointer;
+		font-size: 1.5rem;
+		padding: 0.5rem;
+		aspect-ratio: 1;
+		text-box-trim: trim-both;
+		text-box-edge: cap alphabetic;
 	}
 </style>

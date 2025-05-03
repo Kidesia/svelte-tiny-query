@@ -45,12 +45,11 @@ export function fail<E>(error: E): LoadFailure<E> {
 }
 
 // State
-
 const queriesByKey = $state({} as Record<string, () => void>);
 const loadingByKey = $state({} as Record<string, boolean>);
 const dataByKey = $state({} as Record<string, unknown>);
 const errorByKey = $state({} as Record<string, unknown>);
-const staleTimesByKey = $state({} as Record<string, number>);
+const staleTimeStampByKey = $state({} as Record<string, number>);
 const activeQueriesByKey = $state([] as string[][]);
 
 export const globalLoading = $state({ count: 0 });
@@ -93,6 +92,10 @@ export function createQuery<E, P = void, T = unknown>(
 			query.error = errorByKey[internal.currentKey] as E | undefined;
 		});
 
+		$effect(() => {
+			query.staleTimeStamp = staleTimeStampByKey[internal.currentKey];
+		});
+
 		return {
 			internal,
 			query
@@ -116,7 +119,7 @@ export function createQuery<E, P = void, T = unknown>(
 		}
 
 		untrack(() => {
-			staleTimesByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
+			staleTimeStampByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
 			loadingByKey[cacheKey] = false;
 			globalLoading.count--;
 		});
@@ -132,24 +135,26 @@ export function createQuery<E, P = void, T = unknown>(
 			internal.currentKey = cacheKey;
 
 			untrack(() => {
-				const frozenQueryParam = $state.snapshot(queryParam) as P;
-				queriesByKey[cacheKey] = () => {
-					loadData(frozenQueryParam);
-				};
+				activeQueriesByKey.push(currentKey);
+			});
+
+			const frozenQueryParam = $state.snapshot(queryParam) as P;
+			const queryLoaderInstance = () => {
+				loadData(frozenQueryParam);
+			};
+
+			untrack(() => {
+				queriesByKey[cacheKey] = queryLoaderInstance;
 			});
 
 			const alreadyLoading = untrack(() => loadingByKey[cacheKey]);
 			const staleOrNew = untrack(() => {
-				const staleTime = staleTimesByKey[cacheKey];
+				const staleTime = staleTimeStampByKey[cacheKey];
 				return staleTime ? staleTime < +new Date() : true;
 			});
 
-			untrack(() => {
-				activeQueriesByKey.push(currentKey);
-			});
-
 			if (staleOrNew && !alreadyLoading) {
-				loadData(queryParam);
+				queryLoaderInstance();
 			}
 
 			return () => {

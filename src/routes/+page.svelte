@@ -21,6 +21,6 @@
 
 	section {
 		display: flex;
-		gap: 2rem;
+		gap: 1rem;
 	}
 </style>
