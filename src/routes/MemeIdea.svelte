@@ -13,7 +13,7 @@
 	};
 
 	const useMemeIdea = createQuery(
-		['meme-idea'],
+		['emoji'],
 		async (param: { id: number }) => {
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 			return {
@@ -25,7 +25,7 @@
 				}
 			};
 		},
-		{ staleTime: 30_000 }
+		{ staleTime: 8_000 }
 	);
 
 	const param = $state({ id: 1 });
