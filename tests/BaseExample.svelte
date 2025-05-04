@@ -7,9 +7,9 @@
 		key,
 		loadingFn
 	}: {
-		states: { value: any[] };
+		states: { value: unknown[] };
 		key: string[];
-		loadingFn: () => Promise<LoadResult<any, any>>;
+		loadingFn: () => Promise<LoadResult<unknown, unknown>>;
 	} = $props();
 
 	const testQuery = createQuery(key, loadingFn);
