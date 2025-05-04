@@ -63,13 +63,21 @@ export const globalLoading = $state({ count: 0 });
  * @param key Path of the query
  * @param loadFn Function to load the data
  * @param options Options for the query
+ * @param options.initialData Initial data to be used before the query is loaded
+ * @param options.staleTime Time in milliseconds after which the query is considered stale
  * @returns Query function to use in Svelte components
  */
 export function createQuery<E, P = void, T = unknown>(
 	key: string[] | ((queryParam: P) => string[]),
 	loadFn: (queryParam: P) => Promise<LoadResult<T, E>>,
 	options?: {
-		initialData?: T; // TODO: this should also take a function
+		/**
+		 * Initial data to be used before the query is loaded.
+		 */
+		initialData?: T; // TODO: should also take a function (param: P) => T
+		/**
+		 * Time in milliseconds after which the query is considered stale.
+		 */
 		staleTime?: number;
 	}
 ) {
