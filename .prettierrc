@@ -9,6 +9,13 @@
 			"options": {
 				"parser": "svelte"
 			}
+		},
+		{
+			"files": "*.md",
+			"options": {
+				"useTabs": false,
+				"tabWidth": 2
+			}
 		}
 	]
 }

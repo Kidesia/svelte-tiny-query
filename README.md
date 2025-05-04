@@ -1,52 +1,46 @@
 # Svelte Tiny Query 🦄
 
-**Svelte Tiny Query** simplifies working with external data in Svelte 5. Define declarative queries that handle caching, deduping, and reloading — with reactive access to `data`, `loading`, and `error` states.
-
-Built on Svelte 5's reactivity, it’s _tiny_ (~1.1kB gzipped), fast, and fully type-safe.
+Define declarative queries that handle caching, deduping, reloading and help you simplify your codebase. Built on **Svelte 5's reactivity**, it’s _tiny_ (<1kB gzipped) and fully type-safe.
 
 **Features**
 
 - 🚀 Declarative and reactive queries
-- 💾 Caching with stale-time support
+- 💾 Caching and stale-time support
 - 👬 Deduplication of identical loads
-- 🚧 Easy query invalidation
+- 🚧 Query invalidation from anywhere
 - 🐍 Written in typescript
 
 ## Usage
 
-In your **Svelte 5 project**, install the library.
+In your **Svelte 5** project, install the library.
 
     npm install svelte-tiny-query --save
 
-And use it in your apps.
+And use it l.
 
-```html
+```svelte
 <script>
-	import { createQuery } from 'svelte-tiny-query';
+  import { createQuery } from 'svelte-tiny-query';
 
-	const memeIdeaQuery = createQuery(['meme-ideas'], async ({ id }) => {
-		try {
-			const memeIdea = await fetchDataSomehow(id);
-			return { success: true, data: memeIdea };
-		} catch (e) {
-			return { success: false, error: 'Oopsie!' };
-		}
-	});
+  const memeIdeaQuery = createQuery(['meme-ideas'], async ({ id }) => {
+    try {
+      const memeIdea = await fetchDataSomehow(id);
+      return { success: true, data: memeIdea };
+    } catch (e) {
+      return { success: false, error: 'Oopsie!' };
+    }
+  });
 
-	const queryParam = $state({ id: 1 });
+  const param = $state({ id: 1 });
 
-	const { query } = memeIdeaQuery(queryParam);
+  const { query } = memeIdeaQuery(param);
 </script>
 
-{#if query.loading}
-<p>Loading...</p>
-{:else if query.error}
-<p>Error: {query.error}</p>
-{:else}
-<h1>{query.data.title}</h1>
-{/if}
+{#if query.loading}Query is loading{/if}
+{#if query.error}Error: {query.error}{/if}
+{#if query.data}Data: {query.data}{/if}
 
-<button onclick="{()" ="">{ queryParam.id += 1 }}> Next Meme Idea</button>
+<button onclick={() => param.id++}> Next Meme Idea</button>
 ```
 
 ## Basics
@@ -174,7 +168,7 @@ If multiple identical queries are invalidated, the loading function is only run 
 
 ```typescript
 {
-	count: number;
+  count: number;
 }
 ```
 
@@ -191,10 +185,10 @@ There is no need to set up a query provider. Queries and their caches are global
 Use `$effect`, `setInterval` (or `addEventListener`) and `refetch` to achieve this yourself.
 
 **Dependent Queries**<br />
-Consider extracting the parts of the component that rely on the dependent query into its own component.
+Use `$derived` to conditionally invoke the query function.
 
 **Persisted Queries**<br />
-Use `initialData` and manually persist the data in the loading function.
+Use `initialData` to inject perstisted data into the query.
 
 **Mutations**<br />
 Use `invalidateQueries` anywhere in your app to invalidate queries. This means mutations can just be normal functions.

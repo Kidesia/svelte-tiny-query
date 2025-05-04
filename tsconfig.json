@@ -12,6 +12,7 @@
 		"moduleResolution": "NodeNext",
 		"strict": true,
 		// "noUncheckedIndexedAccess": true,
-		"noImplicitOverride": true
+		"noImplicitOverride": true,
+		"allowImportingTsExtensions": true
 	}
 }

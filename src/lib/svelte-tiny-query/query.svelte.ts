@@ -4,7 +4,8 @@ import { untrack } from 'svelte';
 
 type LoadSuccess<T> = { success: true; data: T };
 type LoadFailure<E> = { success: false; error: E };
-type LoadResult<T, E> = LoadSuccess<T> | LoadFailure<E>;
+
+export type LoadResult<T, E> = LoadSuccess<T> | LoadFailure<E>;
 
 // Helpers
 
@@ -45,6 +46,7 @@ export function fail<E>(error: E): LoadFailure<E> {
 }
 
 // State
+
 const queriesByKey = $state({} as Record<string, () => void>);
 const loadingByKey = $state({} as Record<string, boolean>);
 const dataByKey = $state({} as Record<string, unknown>);
@@ -67,7 +69,7 @@ export function createQuery<E, P = void, T = unknown>(
 	key: string[] | ((queryParam: P) => string[]),
 	loadFn: (queryParam: P) => Promise<LoadResult<T, E>>,
 	options?: {
-		initialData?: T;
+		initialData?: T; // TODO: this should also take a function
 		staleTime?: number;
 	}
 ) {

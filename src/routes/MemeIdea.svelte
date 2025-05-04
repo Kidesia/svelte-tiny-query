@@ -12,7 +12,7 @@
 		});
 	};
 
-	const useMemeIdea = createQuery(
+	const emojiQuery = createQuery(
 		['emoji'],
 		async (param: { id: number }) => {
 			await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -29,12 +29,13 @@
 	);
 
 	const param = $state({ id: 1 });
-	const { query, refetch } = useMemeIdea(param);
+
+	const { query, refetch } = emojiQuery(param);
 </script>
 
 <div class="emojis-container">
 	<h1>
-		Emoji&nbsp;#{param.id}
+		Emoji #{param.id}
 	</h1>
 
 	<div class="flex">
