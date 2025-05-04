@@ -22,31 +22,33 @@ And use it in your apps.
 
 ```html
 <script>
-	import { createQuery } from 'svelte-tiny-query';
+  import { createQuery } from 'svelte-tiny-query';
 
-	const memeIdeaQuery = createQuery(['meme-ideas'], async ({ id }) => {
-		try {
-			const memeIdea = await fetchDataSomehow(id);
-			return { success: true, data: memeIdea };
-		} catch (e) {
-			return { success: false, error: 'Oopsie!' };
-		}
-	});
+  const memeIdeaQuery = createQuery(['meme-ideas'], async ({ id }) => {
+    try {
+      const memeIdea = await fetchDataSomehow(id);
+      return { success: true, data: memeIdea };
+    } catch (e) {
+      return { success: false, error: 'Oopsie!' };
+    }
+  });
 
-	const queryParam = $state({ id: 1 });
+  const queryParam = $state({ id: 1 });
 
-	const { query } = memeIdeaQuery(queryParam);
+  const { query } = memeIdeaQuery(queryParam);
 </script>
 
 {#if query.loading}
-<p>Loading...</p>
+  Query is loading
 {:else if query.error}
-<p>Error: {query.error}</p>
+  Error: {query.error}
 {:else}
-<h1>{query.data.title}</h1>
+  Data: {query.data}
 {/if}
 
-<button onclick="{()" ="">{ queryParam.id += 1 }}> Next Meme Idea</button>
+<button onclick={() => (queryParam.id += 1)}>
+  Next Meme Idea
+</button>
 ```
 
 ## Basics
