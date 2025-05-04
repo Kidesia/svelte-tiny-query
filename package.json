@@ -3,7 +3,7 @@
 	"version": "0.1.1",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/Kidesia/svelte-tiny-query"
+		"url": "git+https://github.com/Kidesia/svelte-tiny-query.git"
 	},
 	"homepage": "https://github.com/Kidesia/svelte-tiny-query#readme",
 	"bugs": {
@@ -34,8 +34,8 @@
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"default": "./dist/index.js",
-			"svelte": "./dist/index.js"
+			"svelte": "./dist/index.js",
+			"default": "./dist/index.js"
 		}
 	},
 	"peerDependencies": {
