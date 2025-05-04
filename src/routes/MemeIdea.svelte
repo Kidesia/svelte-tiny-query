@@ -29,6 +29,7 @@
 	);
 
 	const param = $state({ id: 1 });
+
 	const { query, refetch } = emojiQuery(param);
 </script>
 

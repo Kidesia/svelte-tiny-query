@@ -193,10 +193,10 @@ There is no need to set up a query provider. Queries and their caches are global
 Use `$effect`, `setInterval` (or `addEventListener`) and `refetch` to achieve this yourself.
 
 **Dependent Queries**<br />
-Consider extracting the parts of the component that rely on the dependent query into its own component.
+Use `$derived` to conditionally invoke the query function.
 
 **Persisted Queries**<br />
-Use `initialData` and manually persist the data in the loading function.
+Use `initialData` to inject perstisted data into the query.
 
 **Mutations**<br />
 Use `invalidateQueries` anywhere in your app to invalidate queries. This means mutations can just be normal functions.
