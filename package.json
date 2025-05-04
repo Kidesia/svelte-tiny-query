@@ -3,7 +3,11 @@
 	"version": "0.1.0",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/sra448/svelte-simple-query.git"
+		"url": "git+https://github.com/Kidesia/svelte-tiny-query"
+	},
+	"homepage": "https://github.com/Kidesia/svelte-tiny-query#readme",
+	"bugs": {
+		"url": "https://github.com/Kidesia/svelte-tiny-query/issues"
 	},
 	"scripts": {
 		"dev": "vite dev",
