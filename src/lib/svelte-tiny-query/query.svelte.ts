@@ -54,6 +54,9 @@ const errorByKey = $state({} as Record<string, unknown>);
 const staleTimeStampByKey = $state({} as Record<string, number>);
 const activeQueriesByKey = $state([] as string[][]);
 
+/**
+ * Global loading state to track the number of active queries.
+ */
 export const globalLoading = $state({ count: 0 });
 
 // Actions
@@ -179,13 +182,16 @@ export function createQuery<E, P = void, T = unknown>(
 			};
 		});
 
-		const refetch = () => {
+		const reload = () => {
 			queriesByKey[internal.currentKey]?.();
 		};
 
 		return {
 			query,
-			refetch
+			/**
+			 * reloades the query.
+			 */
+			reload
 		};
 	};
 }

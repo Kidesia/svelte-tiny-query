@@ -30,7 +30,7 @@
 
 	const param = $state({ id: 1 });
 
-	const { query, refetch } = emojiQuery(param);
+	const { query, reload } = emojiQuery(param);
 </script>
 
 <div class="emojis-container">
@@ -39,7 +39,7 @@
 	</h1>
 
 	<div class="flex">
-		<button onclick={refetch}>↻</button>
+		<button onclick={reload}>↻</button>
 		<button onclick={() => param.id--}>-</button>
 		<button onclick={() => param.id++}>+</button>
 	</div>
