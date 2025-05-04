@@ -4,7 +4,8 @@ import { untrack } from 'svelte';
 
 type LoadSuccess<T> = { success: true; data: T };
 type LoadFailure<E> = { success: false; error: E };
-type LoadResult<T, E> = LoadSuccess<T> | LoadFailure<E>;
+
+export type LoadResult<T, E> = LoadSuccess<T> | LoadFailure<E>;
 
 // Helpers
 
