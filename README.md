@@ -47,7 +47,7 @@ And use it l.
 
 ### The Query
 
-A **query** is an abstraction for loading and caching data. It consists of a **loading function** which produces some data, and a **unique key** which identifies that data. Queries expose their reactive `data`, `error`, and `loading` state, along with a `refetch` function.
+A **query** is an abstraction for loading and caching data. It consists of a **loading function** which produces some data, and a **unique key** which identifies that data. Queries expose their reactive `data`, `error`, and `loading` state, along with a `reload` function.
 
 Svelte Tiny Query uses Svelte 5's `$state` to **cache _all_ states of _all_ queries**, indexed by their keys. When you use a query, you are essentially getting reactive access to a small part of the global cache based on the current key.
 
@@ -59,7 +59,7 @@ The key of a query has to uniquely identify the data that the query produces, an
 
 ### When is a query reloaded?
 
-Each query is loaded when it is first used (unless there exists not yet stale cache data for it) and when its `refetch` function is used.
+Each query is loaded when it is first used (unless there exists not yet stale cache data for it) and when its `reload` function is used.
 
 ## API Reference
 
@@ -79,7 +79,7 @@ Svelte Tiny Query only exports 2 functions (`createQuery` and `invalidateQueries
       error: E | undefined,
       loading: boolean
     },
-    refetch: () => void
+    reload: () => void
   }
 ```
 
@@ -138,11 +138,11 @@ options?: {
     error: E | undefined,
     loading: boolean
   },
-  refetch: () => void
+  reload: () => void
 }
 ```
 
-The `createQuery` function returns a query function that gives you access to the reactive state of the query (`data`, `error`, `loading`), and a `refetch` function.
+The `createQuery` function returns a query function that gives you access to the reactive state of the query (`data`, `error`, `loading`), and a `reload` function.
 
 - The query function checks the cache for existing data. If the data is found and not stale, it’s returned immediately.
 
@@ -150,7 +150,7 @@ The `createQuery` function returns a query function that gives you access to the
 
 - Once the loading function completes, the query state updates with the new data or error, and the data is cached for future use.
 
-- The `refetch` function can be used to manually reload the data, which will update the cache and reset the state as needed.
+- The `reload` function can be used to manually reload the data, which will update the cache and reset the state as needed.
 
 - If the query has reactive parameters, a change will trigger a re-initialization, causing a reload based on the new cache key.
 
@@ -182,7 +182,7 @@ Svelte Tiny Query deliberately omits some features that other query libraries of
 There is no need to set up a query provider. Queries and their caches are global in your app.
 
 **Timed and Window Focus Reloading**<br />
-Use `$effect`, `setInterval` (or `addEventListener`) and `refetch` to achieve this yourself.
+Use `$effect`, `setInterval` (or `addEventListener`) and `reload` to achieve this yourself.
 
 **Dependent Queries**<br />
 Use `$derived` to conditionally invoke the query function.
