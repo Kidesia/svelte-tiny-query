@@ -173,10 +173,10 @@ export function createQuery<E, P = void, T = unknown>(
 			return () => {
 				untrack(() => {
 					const activeQueryIndex = activeQueryKeys.findIndex(
-						(key) => key.join('__') === cacheKey
+						(key) => key?.join('__') === cacheKey
 					);
 
-					if (activeQueryIndex > -1) {
+					if (activeQueryIndex >= 0) {
 						activeQueryKeys.splice(activeQueryIndex, 1);
 					}
 				});
