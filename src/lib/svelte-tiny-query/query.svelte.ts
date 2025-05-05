@@ -52,7 +52,7 @@ const loadingByKey = $state({} as Record<string, boolean>);
 const dataByKey = $state({} as Record<string, unknown>);
 const errorByKey = $state({} as Record<string, unknown>);
 const staleTimeStampByKey = $state({} as Record<string, number>);
-const activeQueriesByKey = $state([] as string[][]);
+const activeQueryKeys = $state([] as string[][]);
 
 /**
  * Global loading state to track the number of active queries.
@@ -148,7 +148,7 @@ export function createQuery<E, P = void, T = unknown>(
 			internal.currentKey = cacheKey;
 
 			untrack(() => {
-				activeQueriesByKey.push(currentKey);
+				activeQueryKeys.push(currentKey);
 			});
 
 			const frozenQueryParam = $state.snapshot(queryParam) as P;
@@ -172,12 +172,13 @@ export function createQuery<E, P = void, T = unknown>(
 
 			return () => {
 				untrack(() => {
-					activeQueriesByKey.splice(
-						activeQueriesByKey.findIndex(
-							(activeKey) => activeKey.join('__') === currentKey.join('__')
-						),
-						1
+					const activeQueryIndex = activeQueryKeys.findIndex(
+						(key) => key.join('__') === cacheKey
 					);
+
+					if (activeQueryIndex > -1) {
+						activeQueryKeys.splice(activeQueryIndex, 1);
+					}
 				});
 			};
 		});
@@ -210,7 +211,7 @@ export function invalidateQueries(
 	options?: { force?: boolean; exact?: boolean }
 ) {
 	const cacheKey = key.join('__');
-	const queriesToInvalidate = activeQueriesByKey.filter((query) =>
+	const queriesToInvalidate = activeQueryKeys.filter((query) =>
 		options?.exact
 			? query.join('__') === cacheKey
 			: query.join('__').startsWith(cacheKey)
