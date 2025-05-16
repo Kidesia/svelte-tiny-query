@@ -127,12 +127,14 @@ export function createQuery<E, P = void, T = unknown>(
 		const loadResult = await loadFn(queryParam);
 		if (loadResult.success) {
 			dataByKey[cacheKey] = loadResult.data;
+			untrack(() => {
+				staleTimeStampByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
+			});
 		} else {
 			errorByKey[cacheKey] = loadResult.error;
 		}
 
 		untrack(() => {
-			staleTimeStampByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
 			loadingByKey[cacheKey] = false;
 			globalLoading.count--;
 		});
