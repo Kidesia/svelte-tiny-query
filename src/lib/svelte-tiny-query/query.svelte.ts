@@ -179,7 +179,9 @@ export function createQuery<E, P = void, T = unknown>(
 					);
 
 					if (activeQueryIndex >= 0) {
-						activeQueries.keys.splice(activeQueryIndex, 1);
+						activeQueries.keys = activeQueries.keys.filter(
+							(_, index) => index !== activeQueryIndex
+						);
 					}
 				});
 			};
