@@ -150,7 +150,9 @@ export function createQuery<E, P = void, T = unknown>(
 			internal.currentKey = cacheKey;
 
 			untrack(() => {
-				activeQueries.keys = [...activeQueries.keys, currentKey];
+				if (!activeQueries.keys.some((key) => areKeysEqual(currentKey, key))) {
+					activeQueries.keys = [...activeQueries.keys, currentKey];
+				}
 			});
 
 			const frozenQueryParam = $state.snapshot(queryParam) as P;
@@ -230,4 +232,22 @@ export function invalidateQueries(
 
 		queriesByKey[cacheKey]?.();
 	});
+}
+
+/**
+ * Returns if two keys are equal.
+ * @param key1 First key
+ * @param key2 Second key
+ * @returns
+ */
+function areKeysEqual(key1: string[], key2: string[]) {
+	if (key1.length !== key2.length) {
+		return false;
+	}
+	for (let i = 0; i < key1.length; i++) {
+		if (key1[i] !== key2[i]) {
+			return false;
+		}
+	}
+	return true;
 }
