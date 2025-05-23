@@ -215,6 +215,15 @@ export function invalidateQueries(
 	options?: { force?: boolean; exact?: boolean }
 ) {
 	const cacheKey = key.join('__');
+
+	// marks all relevant queries as stale
+	Object.keys(staleTimeStampByKey).forEach((key) => {
+		if (options?.exact ? key === cacheKey : key.startsWith(cacheKey)) {
+			staleTimeStampByKey[key] = +new Date() - 1;
+		}
+	});
+
+	// reloads the currently active queries right away
 	const queriesToInvalidate = activeQueries.keys.filter((query) =>
 		options?.exact
 			? query.join('__') === cacheKey
