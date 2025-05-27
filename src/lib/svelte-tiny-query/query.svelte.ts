@@ -211,7 +211,6 @@ export function invalidateQueries(
 	// marks all matching queries as stale
 	Object.keys(staleTimeStampByKey).forEach((key) => {
 		if (options?.exact ? key === cacheKey : key.startsWith(cacheKey)) {
-			console.log('Invalidating query:', key);
 			staleTimeStampByKey[key] = +new Date() - 1;
 		}
 	});
@@ -224,8 +223,6 @@ export function invalidateQueries(
 	);
 
 	queriesToInvalidate.forEach(([key]) => {
-		console.log('Reloading query:', key);
-
 		if (options?.force) {
 			loadingByKey[key] = false;
 			dataByKey[key] = undefined;
