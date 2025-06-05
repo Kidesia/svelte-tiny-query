@@ -174,7 +174,7 @@ export function createQuery<E, P = void, T = unknown>(
 
 			return () => {
 				untrack(() => {
-					activeQueryCounts[cacheKey] = (activeQueryCounts[cacheKey] ?? 0) - 1;
+					activeQueryCounts[cacheKey] = Math.max((activeQueryCounts[cacheKey] ?? 0) - 1, 0);
 				});
 			};
 		});
