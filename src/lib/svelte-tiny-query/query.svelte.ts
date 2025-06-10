@@ -61,6 +61,37 @@ export const globalLoading = $state({ count: 0 });
 
 // Actions
 
+type QueryState<T, E> = {
+	loading: boolean;
+	error: E | undefined;
+	data: T;
+	staleTimeStamp: number | undefined;
+};
+
+export function createQuery<E, P = void, T = unknown>(
+	key: string[] | ((queryParam: P) => string[]),
+	loadFn: (queryParam: P) => Promise<LoadResult<T, E>>,
+	options: {
+		initialData: T;
+		staleTime?: number;
+	}
+): (queryParam: P) => {
+	query: QueryState<T, E>;
+	reload: () => void;
+};
+
+export function createQuery<E, P = void, T = unknown>(
+	key: string[] | ((queryParam: P) => string[]),
+	loadFn: (queryParam: P) => Promise<LoadResult<T, E>>,
+	options?: {
+		initialData?: T;
+		staleTime?: number;
+	}
+): (queryParam: P) => {
+	query: QueryState<T | undefined, E>;
+	reload: () => void;
+};
+
 /**
  * Creates a query function that can be used to load data.
  * @param key Path of the query
@@ -83,7 +114,10 @@ export function createQuery<E, P = void, T = unknown>(
 		 */
 		staleTime?: number;
 	}
-) {
+): (queryParam: P) => {
+	query: QueryState<T | undefined, E>;
+	reload: () => void;
+} {
 	const initializeState = (currentKey: string) => {
 		const internal = $state({ currentKey });
 		const query = $state({
