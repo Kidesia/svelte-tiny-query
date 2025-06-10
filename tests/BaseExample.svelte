@@ -5,14 +5,19 @@
 	let {
 		states,
 		key,
-		loadingFn
+		loadingFn,
+		queryOptions
 	}: {
 		states: { value: unknown[] };
 		key: string[];
 		loadingFn: () => Promise<LoadResult<unknown, unknown>>;
+		queryOptions?: {
+			staleTime?: number;
+			initialData?: unknown;
+		};
 	} = $props();
 
-	const testQuery = createQuery(key, loadingFn);
+	const testQuery = createQuery(key, loadingFn, queryOptions);
 
 	const { query } = testQuery();
 
