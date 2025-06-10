@@ -52,7 +52,7 @@ const loadingByKey = $state({} as Record<string, boolean>);
 const dataByKey = $state({} as Record<string, unknown>);
 const errorByKey = $state({} as Record<string, unknown>);
 const staleTimeStampByKey = $state({} as Record<string, number>);
-export const activeQueries = $state({ keys: [] as string[][] });
+export const activeQueryCounts = $state({} as Record<string, number>);
 
 /**
  * Global loading state to track the number of active queries.
@@ -150,7 +150,7 @@ export function createQuery<E, P = void, T = unknown>(
 			internal.currentKey = cacheKey;
 
 			untrack(() => {
-				activeQueries.keys = [...activeQueries.keys, currentKey];
+				activeQueryCounts[cacheKey] = (activeQueryCounts[cacheKey] ?? 0) + 1;
 			});
 
 			const frozenQueryParam = $state.snapshot(queryParam) as P;
@@ -174,15 +174,10 @@ export function createQuery<E, P = void, T = unknown>(
 
 			return () => {
 				untrack(() => {
-					const activeQueryIndex = activeQueries.keys.findIndex(
-						(key) => key?.join('__') === cacheKey
+					activeQueryCounts[cacheKey] = Math.max(
+						(activeQueryCounts[cacheKey] ?? 0) - 1,
+						0
 					);
-
-					if (activeQueryIndex >= 0) {
-						activeQueries.keys = activeQueries.keys.filter(
-							(_, index) => index !== activeQueryIndex
-						);
-					}
 				});
 			};
 		});
@@ -216,29 +211,27 @@ export function invalidateQueries(
 ) {
 	const cacheKey = key.join('__');
 
-	// marks all relevant queries as stale
+	// marks all matching queries as stale
 	Object.keys(staleTimeStampByKey).forEach((key) => {
 		if (options?.exact ? key === cacheKey : key.startsWith(cacheKey)) {
 			staleTimeStampByKey[key] = +new Date() - 1;
 		}
 	});
 
-	// reloads the currently active queries right away
-	const queriesToInvalidate = activeQueries.keys.filter((query) =>
-		options?.exact
-			? query.join('__') === cacheKey
-			: query.join('__').startsWith(cacheKey)
+	// reloads the matching currently active queries right away
+	const queriesToInvalidate = Object.entries(activeQueryCounts).filter(
+		([key, usageCount]) =>
+			usageCount > 0 &&
+			(options?.exact ? key === cacheKey : key.startsWith(cacheKey))
 	);
 
-	queriesToInvalidate.forEach((query) => {
-		const cacheKey = query.join('__');
-
+	queriesToInvalidate.forEach(([key]) => {
 		if (options?.force) {
-			loadingByKey[cacheKey] = false;
-			dataByKey[cacheKey] = undefined;
-			errorByKey[cacheKey] = undefined;
+			loadingByKey[key] = false;
+			dataByKey[key] = undefined;
+			errorByKey[key] = undefined;
 		}
 
-		queriesByKey[cacheKey]?.();
+		queriesByKey[key]?.();
 	});
 }
