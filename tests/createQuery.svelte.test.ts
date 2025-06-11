@@ -47,6 +47,51 @@ describe('createQuery', () => {
 		]);
 	});
 
+	test('Initial data', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const states = $state({ value: [] });
+		const rendered = render(TestContainerNoParam, {
+			props: {
+				states,
+				key: ['initial-data-test'],
+				loadingFn: async () => ({ success: true, data: 'updated data' }),
+				queryOptions: {
+					initialData: 'initial data'
+				}
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: updated data')).toBeInTheDocument();
+		});
+
+		expect(states.value).toEqual([
+			// Initial state (from initialData)
+			{
+				data: 'initial data',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: undefined
+			},
+			{
+				data: 'initial data',
+				error: undefined,
+				loading: true,
+				staleTimeStamp: undefined
+			},
+			// After loading
+			{
+				data: 'updated data',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: mockDate.getTime()
+			}
+		]);
+	});
+
 	test('Error', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
@@ -249,47 +294,118 @@ describe('createQuery', () => {
 		]);
 	});
 
-	test('With initial data', async () => {
+	test('Staletime', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
+		const expectedStaleTime = mockDate.getTime() + 3000;
 
 		const states = $state({ value: [] });
-		const rendered = render(TestContainerNoParam, {
+		const rendered = render(TestContainerWithParam, {
 			props: {
 				states,
-				key: ['initial-data-test'],
-				loadingFn: async () => ({ success: true, data: 'updated data' }),
+				key: ['basic-cache-example'],
+				loadingFn: async (param: { id: number }) => ({
+					success: true,
+					data: `id is ${param.id}`
+				}),
 				queryOptions: {
-					initialData: 'initial data'
+					staleTime: 3000
 				}
 			}
 		});
 
 		await waitFor(() => {
-			expect(rendered.queryByText('Data: updated data')).toBeInTheDocument();
+			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Increment')?.click();
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: id is 2')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Decrement')?.click();
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Increment')?.click();
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: id is 2')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Decrement')?.click();
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
 		});
 
 		expect(states.value).toEqual([
-			// Initial state (from initialData)
+			// Initial state
 			{
-				data: 'initial data',
+				data: undefined,
 				error: undefined,
 				loading: false,
 				staleTimeStamp: undefined
 			},
 			{
-				data: 'initial data',
+				data: undefined,
 				error: undefined,
 				loading: true,
 				staleTimeStamp: undefined
 			},
-			// After loading
 			{
-				data: 'updated data',
+				data: 'id is 1',
 				error: undefined,
 				loading: false,
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: expectedStaleTime
+			},
+			// incrementing to id 2
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				staleTimeStamp: undefined
+			},
+			{
+				data: 'id is 2',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: expectedStaleTime + 1000
+			},
+			// decrementing back to id 1 (not stale yet)
+			{
+				data: 'id is 1',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: expectedStaleTime
+			},
+			// incrementing to id 2 (not stale yet)
+			{
+				data: 'id is 2',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: expectedStaleTime + 1000
+			},
+			// decrementing back to id 1 (now stale!)
+			{
+				data: 'id is 1',
+				error: undefined,
+				loading: true,
+				staleTimeStamp: expectedStaleTime
+			},
+			{
+				data: 'id is 1',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: expectedStaleTime + 4000
 			}
 		]);
 	});
