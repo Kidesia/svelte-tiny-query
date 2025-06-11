@@ -1,16 +1,17 @@
 import { describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
-import BaseExample from './BaseExample.svelte';
-import ControlsExample from './ControlsExample.svelte';
+import TestContainerNoParam from './BaseExample.svelte';
+import TestContainerWithParam from './ControlsExample.svelte';
 
 describe('createQuery', () => {
-	test('Return the correct states for a successful query', async () => {
-		const states = $state({
-			value: []
-		});
+	test('No param', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
 
-		const rendered = render(BaseExample, {
+		const states = $state({ value: [] });
+		const rendered = render(TestContainerNoParam, {
 			props: {
 				states,
 				key: ['successful-test'],
@@ -22,33 +23,37 @@ describe('createQuery', () => {
 			expect(rendered.queryByText('Data: payload')).toBeInTheDocument();
 		});
 
-		expect(states.value).toHaveLength(3);
-
-		expect(states.value[0]).toMatchObject({
-			data: undefined,
-			error: undefined,
-			loading: false
-		});
-
-		expect(states.value[1]).toMatchObject({
-			data: undefined,
-			error: undefined,
-			loading: true
-		});
-
-		expect(states.value[2]).toMatchObject({
-			data: 'payload',
-			error: undefined,
-			loading: false
-		});
+		expect(states.value).toEqual([
+			// Initial state
+			{
+				data: undefined,
+				error: undefined,
+				loading: false,
+				staleTimeStamp: undefined
+			},
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				staleTimeStamp: undefined
+			},
+			// After loading
+			{
+				data: 'payload',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: mockDate.getTime()
+			}
+		]);
 	});
 
-	test('Return the correct states for a failed query', async () => {
-		const states = $state({
-			value: []
-		});
+	test('Error', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
 
-		const rendered = render(BaseExample, {
+		const states = $state({ value: [] });
+		const rendered = render(TestContainerNoParam, {
 			props: {
 				states,
 				key: ['failed-test'],
@@ -60,92 +65,37 @@ describe('createQuery', () => {
 			expect(rendered.queryByText('Error: oopsie')).toBeInTheDocument();
 		});
 
-		expect(states.value).toHaveLength(3);
-
-		expect(states.value[0]).toMatchObject({
-			data: undefined,
-			error: undefined,
-			loading: false
-		});
-
-		expect(states.value[1]).toMatchObject({
-			data: undefined,
-			error: undefined,
-			loading: true
-		});
-
-		expect(states.value[2]).toMatchObject({
-			data: undefined,
-			error: 'oopsie',
-			loading: false
-		});
-	});
-
-	test('Reloads data when param changes', async () => {
-		const states = $state({
-			value: []
-		});
-
-		const rendered = render(ControlsExample, {
-			props: {
-				states,
-				key: ['param-example'],
-				loadingFn: async (param: { id: number }) => ({
-					success: true,
-					data: `id is ${param.id}`
-				})
+		expect(states.value).toEqual([
+			// Initial state
+			{
+				data: undefined,
+				error: undefined,
+				loading: false,
+				staleTimeStamp: undefined
+			},
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				staleTimeStamp: undefined
+			},
+			// After loading
+			{
+				data: undefined,
+				error: 'oopsie',
+				loading: false,
+				staleTimeStamp: undefined
 			}
-		});
-
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
-		});
-
-		rendered.queryByText('Increment')?.click();
-
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: id is 2')).toBeInTheDocument();
-		});
-
-		expect(states.value).toHaveLength(5);
-
-		expect(states.value[0]).toMatchObject({
-			data: undefined,
-			error: undefined,
-			loading: false
-		});
-
-		expect(states.value[1]).toMatchObject({
-			data: undefined,
-			error: undefined,
-			loading: true
-		});
-
-		expect(states.value[2]).toMatchObject({
-			data: 'id is 1',
-			error: undefined,
-			loading: false
-		});
-
-		expect(states.value[3]).toMatchObject({
-			data: undefined,
-			error: undefined,
-			loading: true
-		});
-
-		expect(states.value[4]).toMatchObject({
-			data: 'id is 2',
-			error: undefined,
-			loading: false
-		});
+		]);
 	});
 
-	test('Shows data from cache when it already has it', async () => {
-		const states = $state({
-			value: []
-		});
+	test('Reactive param', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
 
-		const rendered = render(ControlsExample, {
+		const states = $state({ value: [] });
+		const rendered = render(TestContainerWithParam, {
 			props: {
 				states,
 				key: ['basic-cache-example'],
@@ -160,11 +110,15 @@ describe('createQuery', () => {
 			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
 		});
 
+		vi.advanceTimersByTime(1000);
+
 		rendered.queryByText('Increment')?.click();
 
 		await waitFor(() => {
 			expect(rendered.queryByText('Data: id is 2')).toBeInTheDocument();
 		});
+
+		vi.advanceTimersByTime(1000);
 
 		rendered.queryByText('Decrement')?.click();
 
@@ -172,61 +126,62 @@ describe('createQuery', () => {
 			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
 		});
 
-		expect(states.value).toHaveLength(7);
-
-		expect(states.value[0]).toMatchObject({
-			data: undefined,
-			error: undefined,
-			loading: false
-		});
-
-		expect(states.value[1]).toMatchObject({
-			data: undefined,
-			error: undefined,
-			loading: true
-		});
-
-		expect(states.value[2]).toMatchObject({
-			data: 'id is 1',
-			error: undefined,
-			loading: false
-		});
-
-		expect(states.value[3]).toMatchObject({
-			data: undefined,
-			error: undefined,
-			loading: true
-		});
-
-		expect(states.value[4]).toMatchObject({
-			data: 'id is 2',
-			error: undefined,
-			loading: false
-		});
-
-		expect(states.value[5]).toMatchObject({
-			data: 'id is 1',
-			error: undefined,
-			loading: true
-		});
-
-		expect(states.value[6]).toMatchObject({
-			data: 'id is 1',
-			error: undefined,
-			loading: false
-		});
+		expect(states.value).toEqual([
+			// Initial state
+			{
+				data: undefined,
+				error: undefined,
+				loading: false,
+				staleTimeStamp: undefined
+			},
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				staleTimeStamp: undefined
+			},
+			{
+				data: 'id is 1',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: mockDate.getTime()
+			},
+			// incrementing to id 2
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				staleTimeStamp: undefined
+			},
+			{
+				data: 'id is 2',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: mockDate.getTime() + 1000
+			},
+			// decrementing back to id 1
+			{
+				data: 'id is 1',
+				error: undefined,
+				loading: true,
+				staleTimeStamp: mockDate.getTime()
+			},
+			{
+				data: 'id is 1',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: mockDate.getTime() + 2000
+			}
+		]);
 	});
 
-	test('instantly contains data if initialData is provided', async () => {
+	test('With initial data', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
 
-		const states = $state({
-			value: []
-		});
-
-		const rendered = render(BaseExample, {
+		const states = $state({ value: [] });
+		const rendered = render(TestContainerNoParam, {
 			props: {
 				states,
 				key: ['initial-data-test'],
@@ -242,6 +197,7 @@ describe('createQuery', () => {
 		});
 
 		expect(states.value).toEqual([
+			// Initial state (from initialData)
 			{
 				data: 'initial data',
 				error: undefined,
@@ -254,6 +210,7 @@ describe('createQuery', () => {
 				loading: true,
 				staleTimeStamp: undefined
 			},
+			// After loading
 			{
 				data: 'updated data',
 				error: undefined,
