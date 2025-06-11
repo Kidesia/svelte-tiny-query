@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
-import TestContainerNoParam from './BaseExample.svelte';
-import TestContainerWithParam from './ControlsExample.svelte';
+import TestContainerNoParam from './TestContainerNoParam.svelte';
+import TestContainerWithParam from './TestContainerWithParam.svelte';
 
 describe('createQuery', () => {
 	test('No param', async () => {
@@ -85,6 +85,80 @@ describe('createQuery', () => {
 				error: 'oopsie',
 				loading: false,
 				staleTimeStamp: undefined
+			}
+		]);
+	});
+
+	test('Error after reload', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		let i = $state(0);
+		const states = $state({ value: [] });
+		const rendered = render(TestContainerNoParam, {
+			props: {
+				states,
+				key: ['error-after-reload'],
+				loadingFn: async () => {
+					i++;
+					return i % 2 === 1
+						? { success: true, data: 'lucky you' }
+						: { success: false, error: 'oopsie' };
+				}
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: lucky you')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		await waitFor(() => {
+			expect(rendered.queryByText('Reload')).toBeInTheDocument();
+		});
+		rendered.queryByText('Reload')?.click();
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Error: oopsie')).toBeInTheDocument();
+		});
+
+		console.log(states.value);
+
+		expect(states.value).toEqual([
+			// Initial state
+			{
+				data: undefined,
+				error: undefined,
+				loading: false,
+				staleTimeStamp: undefined
+			},
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				staleTimeStamp: undefined
+			},
+			// After loading
+			{
+				data: 'lucky you',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: mockDate.getTime()
+			},
+			// Refetching
+			{
+				data: 'lucky you',
+				error: undefined,
+				loading: true,
+				staleTimeStamp: mockDate.getTime()
+			},
+			// After error (still has previous data)
+			{
+				data: 'lucky you',
+				error: 'oopsie',
+				loading: false,
+				staleTimeStamp: mockDate.getTime()
 			}
 		]);
 	});

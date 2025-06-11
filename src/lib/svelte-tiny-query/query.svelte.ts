@@ -238,6 +238,7 @@ export function createQuery<E, P = void, T = unknown>(
 		});
 
 		const reload = () => {
+			console.log('Reloading query for key:', internal.currentKey);
 			queriesByKey[internal.currentKey]?.();
 		};
 
