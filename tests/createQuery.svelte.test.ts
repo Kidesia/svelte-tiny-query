@@ -5,6 +5,47 @@ import BaseExample from './BaseExample.svelte';
 import ControlsExample from './ControlsExample.svelte';
 
 describe('createQuery', () => {
+	test('instantly contains data if initialData is provided', async () => {
+		const states = $state({
+			value: []
+		});
+
+		const rendered = render(BaseExample, {
+			props: {
+				states,
+				key: ['initial-data-test'],
+				loadingFn: async () => ({ success: true, data: 'updated data' }),
+				queryOptions: {
+					initialData: 'initial data'
+				}
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: updated data')).toBeInTheDocument();
+		});
+
+		expect(states.value).toHaveLength(3);
+
+		expect(states.value[0]).toMatchObject({
+			data: 'initial data',
+			error: undefined,
+			loading: false
+		});
+
+		expect(states.value[1]).toMatchObject({
+			data: 'initial data',
+			error: undefined,
+			loading: true
+		});
+
+		expect(states.value[2]).toMatchObject({
+			data: 'updated data',
+			error: undefined,
+			loading: false
+		});
+	});
+
 	test('Return the correct states for a successful query', async () => {
 		const states = $state({
 			value: []

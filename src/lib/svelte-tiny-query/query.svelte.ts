@@ -61,6 +61,43 @@ export const globalLoading = $state({ count: 0 });
 
 // Actions
 
+type QueryState<T, E> = {
+	loading: boolean;
+	error: E | undefined;
+	data: T;
+	staleTimeStamp: number | undefined;
+};
+
+/**
+ * Creates a query function that can be used to load data.
+ * @param key Path of the query
+ * @param loadFn Function to load the data
+ * @param options Options for the query
+ * @param options.initialData Initial data to be used before the query is loaded
+ * @param options.staleTime Time in milliseconds after which the query is considered stale
+ * @returns Query function to use in Svelte components
+ */
+export function createQuery<E, P = void, T = unknown>(
+	key: string[] | ((queryParam: P) => string[]),
+	/**
+	 * Foo.
+	 */
+	loadFn: (queryParam: P) => Promise<LoadResult<T, E>>,
+	options: {
+		/**
+		 * Initial data to be used before the query is loaded.
+		 */
+		initialData: T;
+		/**
+		 * Time in milliseconds after which the query is considered stale.
+		 */
+		staleTime?: number;
+	}
+): (queryParam: P) => {
+	query: QueryState<T, E>;
+	reload: () => void;
+};
+
 /**
  * Creates a query function that can be used to load data.
  * @param key Path of the query
@@ -77,13 +114,28 @@ export function createQuery<E, P = void, T = unknown>(
 		/**
 		 * Initial data to be used before the query is loaded.
 		 */
-		initialData?: T; // TODO: should also take a function (param: P) => T
+		initialData?: T;
 		/**
 		 * Time in milliseconds after which the query is considered stale.
 		 */
 		staleTime?: number;
 	}
-) {
+): (queryParam: P) => {
+	query: QueryState<T | undefined, E>;
+	reload: () => void;
+};
+
+export function createQuery<E, P = void, T = unknown>(
+	key: string[] | ((queryParam: P) => string[]),
+	loadFn: (queryParam: P) => Promise<LoadResult<T, E>>,
+	options?: {
+		initialData?: T;
+		staleTime?: number;
+	}
+): (queryParam: P) => {
+	query: QueryState<T | undefined, E>;
+	reload: () => void;
+} {
 	const initializeState = (currentKey: string) => {
 		const internal = $state({ currentKey });
 		const query = $state({
@@ -98,7 +150,10 @@ export function createQuery<E, P = void, T = unknown>(
 		});
 
 		$effect(() => {
-			query.data = dataByKey[internal.currentKey] as T;
+			query.data =
+				internal.currentKey in dataByKey
+					? (dataByKey[internal.currentKey] as T)
+					: options?.initialData;
 		});
 
 		$effect(() => {
