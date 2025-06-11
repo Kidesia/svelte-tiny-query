@@ -150,9 +150,10 @@ export function createQuery<E, P = void, T = unknown>(
 		});
 
 		$effect(() => {
-			query.data = (dataByKey[internal.currentKey] ?? options?.initialData) as
-				| T
-				| undefined;
+			query.data =
+				internal.currentKey in dataByKey
+					? (dataByKey[internal.currentKey] as T)
+					: options?.initialData;
 		});
 
 		$effect(() => {
