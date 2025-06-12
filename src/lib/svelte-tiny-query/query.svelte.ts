@@ -146,13 +146,12 @@ export function createQuery<E, P = void, T = unknown>(
 		});
 
 		$effect(() => {
-			query.loading =
-				internal.currentKey in loadingByKey
-					? loadingByKey[internal.currentKey]
-					: true;
+			// If there is no value yet, we act as if the query is loading (as it is about to).
+			query.loading = loadingByKey[internal.currentKey] ?? true;
 		});
 
 		$effect(() => {
+			// If the data is not yet loaded, we use the initial data (if provided).
 			query.data =
 				internal.currentKey in dataByKey
 					? (dataByKey[internal.currentKey] as T)
