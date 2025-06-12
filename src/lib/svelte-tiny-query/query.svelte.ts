@@ -139,17 +139,19 @@ export function createQuery<E, P = void, T = unknown>(
 	const initializeState = (currentKey: string) => {
 		const internal = $state({ currentKey });
 		const query = $state({
-			loading: false,
+			loading: true,
 			error: undefined as E | undefined,
 			data: options?.initialData,
 			staleTimeStamp: undefined as number | undefined
 		});
 
 		$effect(() => {
-			query.loading = !!loadingByKey[internal.currentKey];
+			// If there is no value yet, we act as if the query is loading (as it is about to).
+			query.loading = loadingByKey[internal.currentKey] ?? true;
 		});
 
 		$effect(() => {
+			// If the data is not yet loaded, we use the initial data (if provided).
 			query.data =
 				internal.currentKey in dataByKey
 					? (dataByKey[internal.currentKey] as T)
