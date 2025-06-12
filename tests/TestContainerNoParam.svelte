@@ -5,26 +5,28 @@
 	let {
 		states,
 		key,
-		loadingFn
+		loadingFn,
+		queryOptions
 	}: {
 		states: { value: unknown[] };
 		key: string[];
-		loadingFn: (param: { id: number }) => Promise<LoadResult<unknown, unknown>>;
+		loadingFn: () => Promise<LoadResult<unknown, unknown>>;
+		queryOptions?: {
+			staleTime?: number;
+			initialData?: unknown;
+		};
 	} = $props();
 
-	const testQuery = createQuery(key, loadingFn);
+	const testQuery = createQuery(key, loadingFn, queryOptions);
 
-	let param = $state({ id: 1 });
-
-	const { query } = testQuery(param);
+	const { query, reload } = testQuery();
 
 	$effect(() => {
 		states.value = [...untrack(() => states.value), $state.snapshot(query)];
 	});
 </script>
 
-<button onclick={() => param.id--}>Decrement</button>
-<button onclick={() => param.id++}>Increment</button>
+<button onclick={reload}>Reload</button>
 
 <div>Loading: {query.loading}</div>
 <div>Error: {query.error}</div>
