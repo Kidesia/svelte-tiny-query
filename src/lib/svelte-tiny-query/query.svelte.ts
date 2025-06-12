@@ -139,14 +139,17 @@ export function createQuery<E, P = void, T = unknown>(
 	const initializeState = (currentKey: string) => {
 		const internal = $state({ currentKey });
 		const query = $state({
-			loading: false,
+			loading: true,
 			error: undefined as E | undefined,
 			data: options?.initialData,
 			staleTimeStamp: undefined as number | undefined
 		});
 
 		$effect(() => {
-			query.loading = !!loadingByKey[internal.currentKey];
+			query.loading =
+				internal.currentKey in loadingByKey
+					? loadingByKey[internal.currentKey]
+					: true;
 		});
 
 		$effect(() => {
