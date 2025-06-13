@@ -1,12 +1,10 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
-	import { createQuery, type LoadResult } from '../src/lib/index.ts';
+	import { type LoadResult } from '../src/lib/index.ts';
+	import TestContainerChild from './TestContainerChild.svelte';
 
 	let {
 		states,
-		key,
-		loadingFn,
-		queryOptions
+		...props
 	}: {
 		states: { value: unknown[] };
 		key: string[];
@@ -17,17 +15,13 @@
 		};
 	} = $props();
 
-	const testQuery = createQuery(key, loadingFn, queryOptions);
-
-	const { query, reload } = testQuery();
-
-	$effect(() => {
-		states.value = [...untrack(() => states.value), $state.snapshot(query)];
-	});
+	let isShown = $state(true);
 </script>
 
-<button onclick={reload}>Reload</button>
-
-<div>Loading: {query.loading}</div>
-<div>Error: {query.error}</div>
-<div>Data: {query.data ?? ''}</div>
+{#if isShown}
+	<button onclick={() => (isShown = false)}>Hide</button>
+	<TestContainerChild bind:states {...props} />
+{:else}
+	<h1>Nothing to see here</h1>
+	<button onclick={() => (isShown = true)}>Show again</button>
+{/if}
