@@ -1,12 +1,12 @@
 import { describe, expect, test, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/svelte/svelte5';
+import { render } from '@testing-library/svelte/svelte5';
 
 import TestContainerNoParam from './TestContainerNoParam.svelte';
 import TestContainerWithParam from './TestContainerWithParam.svelte';
 import TestContainerMultipleWithParams from './TestContainerMultipleWithParams.svelte';
 
-describe('createQuery', () => {
-	test('No param', async () => {
+describe('No Param', () => {
+	test('Success', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
@@ -20,9 +20,9 @@ describe('createQuery', () => {
 			}
 		});
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: payload')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data: payload'))
+			.toBeInTheDocument();
 
 		expect(states.value).toEqual([
 			// Initial state
@@ -65,9 +65,9 @@ describe('createQuery', () => {
 			}
 		});
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: updated data')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data: updated data'))
+			.toBeInTheDocument();
 
 		expect(states.value).toEqual([
 			// Initial state (from initialData)
@@ -107,9 +107,9 @@ describe('createQuery', () => {
 			}
 		});
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Error: oopsie')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Error: oopsie'))
+			.toBeInTheDocument();
 
 		expect(states.value).toEqual([
 			// Initial state
@@ -135,12 +135,81 @@ describe('createQuery', () => {
 		]);
 	});
 
+	test('Reload', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		let i = 0;
+		const states = $state({ value: [] });
+		const rendered = render(TestContainerNoParam, {
+			props: {
+				states,
+				key: ['no-param-reload'],
+				loadingFn: async () => {
+					i++;
+					return i % 2 === 1
+						? { success: true, data: 'i am not changing' }
+						: { success: true, data: 'just kidding' };
+				}
+			}
+		});
+
+		await expect
+			.poll(() => rendered.queryByText('Data: i am not changing'))
+			.toBeInTheDocument();
+
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Reload')?.click();
+
+		await expect
+			.poll(() => rendered.queryByText('Data: just kidding'))
+			.toBeInTheDocument();
+
+		expect(states.value).toEqual([
+			// Initial state
+			{
+				data: undefined,
+				error: undefined,
+				loading: false,
+				staleTimeStamp: undefined
+			},
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				staleTimeStamp: undefined
+			},
+			// After loading
+			{
+				data: 'i am not changing',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: mockDate.getTime()
+			},
+			// Refetching
+			{
+				data: 'i am not changing',
+				error: undefined,
+				loading: true,
+				staleTimeStamp: mockDate.getTime()
+			},
+			// After error (still has previous data)
+			{
+				data: 'just kidding',
+				error: undefined,
+				loading: false,
+				staleTimeStamp: mockDate.getTime() + 1000
+			}
+		]);
+	});
+
 	test('Error after reload', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
 
-		let i = $state(0);
+		let i = 0;
 		const states = $state({ value: [] });
 		const rendered = render(TestContainerNoParam, {
 			props: {
@@ -155,19 +224,16 @@ describe('createQuery', () => {
 			}
 		});
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: lucky you')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data: lucky you'))
+			.toBeInTheDocument();
 
 		vi.advanceTimersByTime(1000);
-		await waitFor(() => {
-			expect(rendered.queryByText('Reload')).toBeInTheDocument();
-		});
 		rendered.queryByText('Reload')?.click();
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Error: oopsie')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Error: oopsie'))
+			.toBeInTheDocument();
 
 		expect(states.value).toEqual([
 			// Initial state
@@ -206,8 +272,10 @@ describe('createQuery', () => {
 			}
 		]);
 	});
+});
 
-	test('Reactive param', async () => {
+describe('Reactive Param', () => {
+	test('Success', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
@@ -224,25 +292,25 @@ describe('createQuery', () => {
 			}
 		});
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data: id is 1'))
+			.toBeInTheDocument();
 
 		vi.advanceTimersByTime(1000);
 
 		rendered.queryByText('Increment')?.click();
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: id is 2')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data: id is 2'))
+			.toBeInTheDocument();
 
 		vi.advanceTimersByTime(1000);
 
 		rendered.queryByText('Decrement')?.click();
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data: id is 1'))
+			.toBeInTheDocument();
 
 		expect(states.value).toEqual([
 			// Initial state
@@ -314,37 +382,37 @@ describe('createQuery', () => {
 			}
 		});
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data: id is 1'))
+			.toBeInTheDocument();
 
 		vi.advanceTimersByTime(1000);
 		rendered.queryByText('Increment')?.click();
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: id is 2')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data: id is 2'))
+			.toBeInTheDocument();
 
 		vi.advanceTimersByTime(1000);
 		rendered.queryByText('Decrement')?.click();
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data: id is 1'))
+			.toBeInTheDocument();
 
 		vi.advanceTimersByTime(1000);
 		rendered.queryByText('Increment')?.click();
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: id is 2')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data: id is 2'))
+			.toBeInTheDocument();
 
 		vi.advanceTimersByTime(1000);
 		rendered.queryByText('Decrement')?.click();
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data: id is 1'))
+			.toBeInTheDocument();
 
 		expect(states.value).toEqual([
 			// Initial state
@@ -409,7 +477,7 @@ describe('createQuery', () => {
 		]);
 	});
 
-	test('Multiple same queries with staletime', async () => {
+	test('Multiple instances, Staletime', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
@@ -433,26 +501,26 @@ describe('createQuery', () => {
 			}
 		});
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data 1: id is 1')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data 1: id is 1'))
+			.toBeInTheDocument();
 
-		// even though there are two queries, the function will only be called once
+		// even though the query is being used twice, the function will only be called once
 		expect(mockLoadingFn).toHaveBeenCalledTimes(1);
 
 		vi.advanceTimersByTime(1000);
 		rendered.queryByText('Increment 1')?.click();
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data 1: id is 2')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data 1: id is 2'))
+			.toBeInTheDocument();
 
 		vi.advanceTimersByTime(1000);
 		rendered.queryByText('Increment 2')?.click();
 
-		await waitFor(() => {
-			expect(rendered.queryByText('Data 2: id is 2')).toBeInTheDocument();
-		});
+		await expect
+			.poll(() => rendered.queryByText('Data 2: id is 2'))
+			.toBeInTheDocument();
 
 		// even though both queries switched to param 2, the function will only be called once more
 		expect(mockLoadingFn).toHaveBeenCalledTimes(2);

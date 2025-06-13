@@ -79,9 +79,6 @@ type QueryState<T, E> = {
  */
 export function createQuery<E, P = void, T = unknown>(
 	key: string[] | ((queryParam: P) => string[]),
-	/**
-	 * Foo.
-	 */
 	loadFn: (queryParam: P) => Promise<LoadResult<T, E>>,
 	options: {
 		/**
