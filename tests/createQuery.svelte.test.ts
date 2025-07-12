@@ -29,12 +29,6 @@ describe('createQuery', () => {
 			{
 				data: undefined,
 				error: undefined,
-				loading: false,
-				staleTimeStamp: undefined
-			},
-			{
-				data: undefined,
-				error: undefined,
 				loading: true,
 				staleTimeStamp: undefined
 			},
@@ -74,12 +68,6 @@ describe('createQuery', () => {
 			{
 				data: 'initial data',
 				error: undefined,
-				loading: false,
-				staleTimeStamp: undefined
-			},
-			{
-				data: 'initial data',
-				error: undefined,
 				loading: true,
 				staleTimeStamp: undefined
 			},
@@ -113,12 +101,6 @@ describe('createQuery', () => {
 
 		expect(states.value).toEqual([
 			// Initial state
-			{
-				data: undefined,
-				error: undefined,
-				loading: false,
-				staleTimeStamp: undefined
-			},
 			{
 				data: undefined,
 				error: undefined,
@@ -171,12 +153,6 @@ describe('createQuery', () => {
 
 		expect(states.value).toEqual([
 			// Initial state
-			{
-				data: undefined,
-				error: undefined,
-				loading: false,
-				staleTimeStamp: undefined
-			},
 			{
 				data: undefined,
 				error: undefined,
@@ -246,12 +222,6 @@ describe('createQuery', () => {
 
 		expect(states.value).toEqual([
 			// Initial state
-			{
-				data: undefined,
-				error: undefined,
-				loading: false,
-				staleTimeStamp: undefined
-			},
 			{
 				data: undefined,
 				error: undefined,
@@ -348,12 +318,6 @@ describe('createQuery', () => {
 
 		expect(states.value).toEqual([
 			// Initial state
-			{
-				data: undefined,
-				error: undefined,
-				loading: false,
-				staleTimeStamp: undefined
-			},
 			{
 				data: undefined,
 				error: undefined,
@@ -459,12 +423,6 @@ describe('createQuery', () => {
 
 		expect(states1.value).toEqual([
 			// Initial state
-			{
-				data: undefined,
-				error: undefined,
-				loading: false,
-				staleTimeStamp: undefined
-			},
 			{
 				data: undefined,
 				error: undefined,
