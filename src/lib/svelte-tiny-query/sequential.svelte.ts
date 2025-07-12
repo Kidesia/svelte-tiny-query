@@ -16,7 +16,7 @@ import {
 type SequentialLoadSuccess<TData, TCursor> = {
 	success: true;
 	data: TData;
-	cursor: TCursor;
+	cursor: TCursor | undefined;
 };
 type LoadFailure<TError> = { success: false; error: TError };
 
@@ -24,12 +24,17 @@ type SequentialLoadResult<TData, TCursor, TError> =
 	| SequentialLoadSuccess<TData, TCursor>
 	| LoadFailure<TError>;
 
-type QueryState<TData, TCursor, TError> = {
+type QueryState<TData, TError> = {
 	loading: boolean;
+	hasMore: boolean | undefined;
+	data: TData[] | undefined;
 	error: TError | undefined;
-	data: TData | undefined;
-	nextCursor: TCursor | undefined;
 };
+
+// States
+
+const cursorByKey: Record<string, unknown> = $state({});
+const hasMoreByKey: Record<string, boolean | undefined> = $state({});
 
 // Actions
 
@@ -39,23 +44,24 @@ type QueryState<TData, TCursor, TError> = {
  * @param loadFn Function to load the data
  * @returns Query function to use in Svelte components
  */
-export function createSequentialQuery<TData, TCursor, TParam, TError>(
+export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 	key: string[] | ((queryParam: TParam) => string[]),
 	loadFn: (
 		queryParam: TParam,
 		cursor?: TCursor
 	) => Promise<SequentialLoadResult<TData, TCursor, TError>>
 ): (queryParam: TParam) => {
-	query: QueryState<TData, TCursor, TError>;
+	query: QueryState<TData, TError>;
+	loadMore: () => void;
 	reload: () => void;
 } {
 	const initializeState = (currentKey: string) => {
 		const internal = $state({ currentKey });
-		const query: QueryState<TData, TCursor, TError> = $state({
+		const query: QueryState<TData, TError> = $state({
 			loading: false,
-			error: undefined,
+			hasMore: undefined,
 			data: undefined,
-			nextCursor: undefined
+			error: undefined
 		});
 
 		$effect(() => {
@@ -65,12 +71,16 @@ export function createSequentialQuery<TData, TCursor, TParam, TError>(
 		$effect(() => {
 			query.data =
 				internal.currentKey in dataByKey
-					? (dataByKey[internal.currentKey] as TData)
+					? (dataByKey[internal.currentKey] as TData[])
 					: undefined;
 		});
 
 		$effect(() => {
 			query.error = errorByKey[internal.currentKey] as TError | undefined;
+		});
+
+		$effect(() => {
+			query.hasMore = hasMoreByKey[internal.currentKey];
 		});
 
 		return {
@@ -79,7 +89,7 @@ export function createSequentialQuery<TData, TCursor, TParam, TError>(
 		};
 	};
 
-	const loadData = async (queryParam: TParam) => {
+	const loadData = async (queryParam: TParam, reload = false) => {
 		const cacheKey = generateKey(key, queryParam).join('__');
 
 		untrack(() => {
@@ -88,9 +98,20 @@ export function createSequentialQuery<TData, TCursor, TParam, TError>(
 			globalLoading.count++;
 		});
 
-		const loadResult = await loadFn(queryParam);
+		const cursor = untrack(() => cursorByKey[cacheKey] as TCursor | undefined);
+		const loadResult = await loadFn(queryParam, !reload ? cursor : undefined);
+
 		if (loadResult.success) {
-			dataByKey[cacheKey] = loadResult.data;
+			if (Array.isArray(dataByKey[cacheKey]) && !reload) {
+				dataByKey[cacheKey].push(loadResult.data);
+			} else {
+				dataByKey[cacheKey] = [loadResult.data];
+			}
+
+			untrack(() => {
+				cursorByKey[cacheKey] = loadResult.cursor;
+				hasMoreByKey[cacheKey] = loadResult.cursor !== undefined;
+			});
 		} else {
 			errorByKey[cacheKey] = loadResult.error;
 		}
@@ -106,6 +127,8 @@ export function createSequentialQuery<TData, TCursor, TParam, TError>(
 		const { internal, query } = initializeState(cacheKey);
 
 		$effect(() => {
+			console.log('Something calls me');
+
 			const currentKey = generateKey(key, queryParam);
 			const cacheKey = currentKey.join('__');
 			internal.currentKey = cacheKey;
@@ -144,7 +167,13 @@ export function createSequentialQuery<TData, TCursor, TParam, TError>(
 		});
 
 		const reload = () => {
-			queriesByKey[internal.currentKey]?.();
+			if (query.loading || !query.hasMore) return;
+			loadData(queryParam, true);
+		};
+
+		const loadMore = () => {
+			if (query.loading || !query.hasMore) return;
+			loadData(queryParam, false);
 		};
 
 		return {
@@ -152,7 +181,11 @@ export function createSequentialQuery<TData, TCursor, TParam, TError>(
 			/**
 			 * reloades the query.
 			 */
-			reload
+			reload,
+			/**
+			 * Loads more data if available.
+			 */
+			loadMore
 		};
 	};
 }
