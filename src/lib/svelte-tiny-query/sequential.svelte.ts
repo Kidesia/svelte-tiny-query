@@ -20,11 +20,9 @@ type SequentialLoadSuccess<TData, TCursor> = {
 };
 type LoadFailure<TError> = { success: false; error: TError };
 
-export type SequentialLoadResult<TData, TCursor, TError> =
+type SequentialLoadResult<TData, TCursor, TError> =
 	| SequentialLoadSuccess<TData, TCursor>
-	| LoadFailure<TError>;\
-
-// Actions
+	| LoadFailure<TError>;
 
 type QueryState<TData, TCursor, TError> = {
 	loading: boolean;
@@ -32,6 +30,8 @@ type QueryState<TData, TCursor, TError> = {
 	data: TData | undefined;
 	nextCursor: TCursor | undefined;
 };
+
+// Actions
 
 /**
  * Creates a query function that can be used to load data.
@@ -70,7 +70,7 @@ export function createSequentialQuery<TData, TCursor, TParam, TError>(
 		});
 
 		$effect(() => {
-			query.error = errorByKey[internal.currentKey] as E | undefined;
+			query.error = errorByKey[internal.currentKey] as TError | undefined;
 		});
 
 		return {
@@ -114,7 +114,7 @@ export function createSequentialQuery<TData, TCursor, TParam, TError>(
 				activeQueryCounts[cacheKey] = (activeQueryCounts[cacheKey] ?? 0) + 1;
 			});
 
-			const frozenQueryParam = $state.snapshot(queryParam) as P;
+			const frozenQueryParam = $state.snapshot(queryParam) as TParam;
 			const queryLoaderInstance = () => {
 				loadData(frozenQueryParam);
 			};

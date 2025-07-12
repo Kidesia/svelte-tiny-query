@@ -1,6 +1,7 @@
 import { untrack } from 'svelte';
 
 import { generateKey } from './utils.ts';
+import type { LoadResult } from './loadHelpers.ts';
 import {
 	queriesByKey,
 	loadingByKey,
@@ -10,35 +11,6 @@ import {
 	activeQueryCounts,
 	globalLoading
 } from './cache.svelte.ts';
-
-// Types
-
-type LoadSuccess<T> = { success: true; data: T };
-type LoadFailure<E> = { success: false; error: E };
-
-export type LoadResult<T, E> = LoadSuccess<T> | LoadFailure<E>;
-
-// Helpers
-
-/**
- * Constructs a LoadSuccess object.
- * @param data The data to be represented.
- * @returns A LoadSuccess object containing the data.
- */
-export function succeed<T>(data: T): LoadSuccess<T> {
-	return { success: true, data };
-}
-
-/**
- * Constructs a LoadFailure object.
- * @param error The error to be represented.
- * @returns A LoadFailure object containing the error.
- */
-export function fail<E>(error: E): LoadFailure<E> {
-	return { success: false, error };
-}
-
-// Actions
 
 type QueryState<T, E> = {
 	loading: boolean;
@@ -225,44 +197,4 @@ export function createQuery<E, P = void, T = unknown>(
 			reload
 		};
 	};
-}
-
-/**
- * Invalidates queries based on the provided key.
- * This will cause the matching queries to be reloaded if they are currently active.
- * @param key The key of the query to invalidate.
- * @param options Options for invalidation
- * @param options.force If true, resets the cache data of the matching queries right away.
- * @param options.exact If true, only invalidates queries that match the exact key. Otherwise, it will invalidate all queries that start with the provided key.
- * @returns void
- */
-export function invalidateQueries(
-	key: string[],
-	options?: { force?: boolean; exact?: boolean }
-) {
-	const cacheKey = key.join('__');
-
-	// marks all matching queries as stale
-	Object.keys(staleTimeStampByKey).forEach((key) => {
-		if (options?.exact ? key === cacheKey : key.startsWith(cacheKey)) {
-			staleTimeStampByKey[key] = +new Date() - 1;
-		}
-	});
-
-	// reloads the matching currently active queries right away
-	const queriesToInvalidate = Object.entries(activeQueryCounts).filter(
-		([key, usageCount]) =>
-			usageCount > 0 &&
-			(options?.exact ? key === cacheKey : key.startsWith(cacheKey))
-	);
-
-	queriesToInvalidate.forEach(([key]) => {
-		if (options?.force) {
-			loadingByKey[key] = false;
-			dataByKey[key] = undefined;
-			errorByKey[key] = undefined;
-		}
-
-		queriesByKey[key]?.();
-	});
 }

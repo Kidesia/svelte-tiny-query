@@ -1,3 +1,5 @@
+// Key Helpers
+
 export function generateKeyFragment(param: Record<string, unknown>) {
 	return Object.entries(param)
 		.map(([key, value]) => `${key}:${String(value)}`)
