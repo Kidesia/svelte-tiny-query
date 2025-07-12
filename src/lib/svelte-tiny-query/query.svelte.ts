@@ -1,5 +1,16 @@
 import { untrack } from 'svelte';
 
+import { generateKey } from './utils.ts';
+import {
+	queriesByKey,
+	loadingByKey,
+	dataByKey,
+	errorByKey,
+	staleTimeStampByKey,
+	activeQueryCounts,
+	globalLoading
+} from './cache.svelte.ts';
+
 // Types
 
 type LoadSuccess<T> = { success: true; data: T };
@@ -8,24 +19,6 @@ type LoadFailure<E> = { success: false; error: E };
 export type LoadResult<T, E> = LoadSuccess<T> | LoadFailure<E>;
 
 // Helpers
-
-function generateKeyFragment(param: Record<string, unknown>) {
-	return Object.entries(param)
-		.map(([key, value]) => `${key}:${String(value)}`)
-		.sort()
-		.join('|');
-}
-
-function generateKey<T>(
-	baseKey: string[] | ((params: T) => string[]),
-	queryParam: T
-) {
-	return typeof baseKey === 'function'
-		? baseKey(queryParam)
-		: queryParam
-			? [...baseKey, generateKeyFragment(queryParam)]
-			: baseKey;
-}
 
 /**
  * Constructs a LoadSuccess object.
@@ -44,20 +37,6 @@ export function succeed<T>(data: T): LoadSuccess<T> {
 export function fail<E>(error: E): LoadFailure<E> {
 	return { success: false, error };
 }
-
-// State
-
-const queriesByKey = $state({} as Record<string, () => void>);
-const loadingByKey = $state({} as Record<string, boolean>);
-const dataByKey = $state({} as Record<string, unknown>);
-const errorByKey = $state({} as Record<string, unknown>);
-const staleTimeStampByKey = $state({} as Record<string, number>);
-export const activeQueryCounts = $state({} as Record<string, number>);
-
-/**
- * Global loading state to track the number of active queries.
- */
-export const globalLoading = $state({ count: 0 });
 
 // Actions
 
@@ -79,9 +58,6 @@ type QueryState<T, E> = {
  */
 export function createQuery<E, P = void, T = unknown>(
 	key: string[] | ((queryParam: P) => string[]),
-	/**
-	 * Foo.
-	 */
 	loadFn: (queryParam: P) => Promise<LoadResult<T, E>>,
 	options: {
 		/**
@@ -256,7 +232,7 @@ export function createQuery<E, P = void, T = unknown>(
  * This will cause the matching queries to be reloaded if they are currently active.
  * @param key The key of the query to invalidate.
  * @param options Options for invalidation
- * @param options.force If true, forces the query to be invalidated even if it is not currently loading.
+ * @param options.force If true, resets the cache data of the matching queries right away.
  * @param options.exact If true, only invalidates queries that match the exact key. Otherwise, it will invalidate all queries that start with the provided key.
  * @returns void
  */
