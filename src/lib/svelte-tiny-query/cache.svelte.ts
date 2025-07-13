@@ -1,4 +1,4 @@
-export const querieLoaderByKey = $state({} as Record<string, () => void>);
+export const queryLoaderByKey = $state({} as Record<string, () => void>);
 export const loadingByKey = $state({} as Record<string, boolean>);
 export const dataByKey = $state({} as Record<string, unknown>);
 export const errorByKey = $state({} as Record<string, unknown>);

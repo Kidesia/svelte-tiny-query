@@ -2,7 +2,7 @@ import { untrack } from 'svelte';
 
 import { generateKey } from './utils.ts';
 import {
-	querieLoaderByKey,
+	queryLoaderByKey,
 	loadingByKey,
 	dataByKey,
 	errorByKey,
@@ -141,7 +141,7 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 			};
 
 			untrack(() => {
-				querieLoaderByKey[cacheKey] = queryLoaderInstance;
+				queryLoaderByKey[cacheKey] = queryLoaderInstance;
 			});
 
 			const alreadyLoading = untrack(() => loadingByKey[cacheKey]);
