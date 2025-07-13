@@ -127,8 +127,6 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		const { internal, query } = initializeState(cacheKey);
 
 		$effect(() => {
-			console.log('Something calls me');
-
 			const currentKey = generateKey(key, queryParam);
 			const cacheKey = currentKey.join('__');
 			internal.currentKey = cacheKey;
@@ -166,26 +164,22 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 			};
 		});
 
-		const reload = () => {
-			if (query.loading || !query.hasMore) return;
-			loadData(queryParam, true);
-		};
-
-		const loadMore = () => {
-			if (query.loading || !query.hasMore) return;
-			loadData(queryParam, false);
-		};
-
 		return {
 			query,
 			/**
-			 * reloades the query.
+			 * Reloads the query.
 			 */
-			reload,
+			reload: () => {
+				if (query.loading || !query.hasMore) return;
+				loadData(queryParam, true);
+			},
 			/**
 			 * Loads more data if available.
 			 */
-			loadMore
+			loadMore: () => {
+				if (query.loading || !query.hasMore) return;
+				loadData(queryParam, false);
+			}
 		};
 	};
 }
