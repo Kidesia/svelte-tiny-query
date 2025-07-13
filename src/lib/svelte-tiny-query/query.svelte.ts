@@ -12,21 +12,37 @@ import {
 	globalLoading
 } from './cache.svelte.ts';
 
+/**
+ * Represents the current state of a query.
+ * @template TData The type of the data returned by the query.
+ * @template TError The type of the error that can occur during the query.
+ */
 type QueryState<TData, TError> = {
+	/** Indicates if the query is currently loading. */
 	loading: boolean;
+	/** Any error that occurred during the query, or undefined if no error. */
 	error: TError | undefined;
+	/** The data returned by the query. This can be `undefined` if `initialData` was not provided and the query hasn't loaded yet. */
 	data: TData;
+	/** The timestamp when the data will be considered stale, or `undefined` if no staleTime is set or data hasn't loaded. */
 	staleTimeStamp: number | undefined;
 };
 
 /**
- * Creates a query function that can be used to load data.
- * @param key Path of the query
- * @param loadFn Function to load the data
- * @param options Options for the query
- * @param options.initialData Initial data to be used before the query is loaded
- * @param options.staleTime Time in milliseconds after which the query is considered stale
- * @returns Query function to use in Svelte components
+ * Creates a reactive query function for fetching and managing data in Svelte components.
+ *
+ * This overload is used when `options.initialData` is provided, ensuring that
+ * the `query.data` property will always be of type `TData` (never `undefined`).
+ *
+ * @template TError The type of the error that can be returned by the `loadFn`.
+ * @template TParam The type of the parameter passed to the `loadFn`.
+ * @template TData The type of the data returned by the `loadFn`.
+ *
+ * @param key - A unique key for the query.
+ * @param loadFn - An asynchronous function that fetches the data.
+ * @param options - Query options, where `initialData` is required.
+ *
+ * @returns A function returning the reactive query state.
  */
 export function createQuery<TError, TParam = void, TData = unknown>(
 	key: string[] | ((queryParam: TParam) => string[]),
@@ -34,26 +50,34 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 	options: {
 		/**
 		 * Initial data to be used before the query is loaded.
+		 * When provided, the `query.data` will always be of type `TData`.
 		 */
 		initialData: TData;
 		/**
 		 * Time in milliseconds after which the query is considered stale.
+		 * A stale query will be automatically re-fetched when accessed.
 		 */
 		staleTime?: number;
 	}
 ): (queryParam: TParam) => {
+	/** The current state of the query, including loading status, data, and error. */
 	query: QueryState<TData, TError>;
+	/** A function to manually reload the query data. */
 	reload: () => void;
 };
 
 /**
- * Creates a query function that can be used to load data.
- * @param key Path of the query
- * @param loadFn Function to load the data
- * @param options Options for the query
- * @param options.initialData Initial data to be used before the query is loaded
- * @param options.staleTime Time in milliseconds after which the query is considered stale
- * @returns Query function to use in Svelte components
+ * Creates a reactive query function for fetching and managing data in Svelte components.
+ *
+ * @template TError The type of the error that can be returned by the `loadFn`.
+ * @template TParam The type of the parameter passed to the `loadFn`.
+ * @template TData The type of the data returned by the `loadFn`.
+ *
+ * @param key - A unique key for the query.
+ * @param loadFn - An asynchronous function that fetches the data.
+ * @param [options] - Optional query configuration.
+ *
+ * @returns A function returning the reactive query state.
  */
 export function createQuery<TError, TParam = void, TData = unknown>(
 	key: string[] | ((queryParam: TParam) => string[]),
@@ -61,15 +85,19 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 	options?: {
 		/**
 		 * Initial data to be used before the query is loaded.
+		 * If not provided, `query.data` will be `undefined` until the first successful load.
 		 */
 		initialData?: TData;
 		/**
 		 * Time in milliseconds after which the query is considered stale.
+		 * A stale query will be automatically re-fetched when accessed.
 		 */
 		staleTime?: number;
 	}
 ): (queryParam: TParam) => {
+	/** The current state of the query, including loading status, data, and error. */
 	query: QueryState<TData | undefined, TError>;
+	/** A function to manually reload the query data. */
 	reload: () => void;
 };
 
