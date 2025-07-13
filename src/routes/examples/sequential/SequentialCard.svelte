@@ -4,14 +4,11 @@
 	const testQuery = createSequentialQuery(
 		['to-infinity'],
 		async (_param, cursor: number = 0) => {
-			console.log('Fetching data with cursor:', cursor);
-
 			await new Promise((resolve) => {
 				setTimeout(resolve, 500);
 			});
 
 			const hasMore = cursor <= 12 && Math.random() > 0.2;
-			console.log('Has more data:', hasMore);
 			return {
 				success: true,
 				data: [cursor, cursor + 1],

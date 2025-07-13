@@ -1,5 +1,5 @@
 import {
-	queriesByKey,
+	querieLoaderByKey,
 	loadingByKey,
 	dataByKey,
 	errorByKey,
@@ -43,6 +43,6 @@ export function invalidateQueries(
 			errorByKey[key] = undefined;
 		}
 
-		queriesByKey[key]?.();
+		querieLoaderByKey[key]?.();
 	});
 }

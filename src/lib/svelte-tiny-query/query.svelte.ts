@@ -3,7 +3,7 @@ import { untrack } from 'svelte';
 import { generateKey } from './utils.ts';
 import type { LoadResult } from './loadHelpers.ts';
 import {
-	queriesByKey,
+	querieLoaderByKey,
 	loadingByKey,
 	dataByKey,
 	errorByKey,
@@ -84,40 +84,6 @@ export function createQuery<E, P = void, T = unknown>(
 	query: QueryState<T | undefined, E>;
 	reload: () => void;
 } {
-	const initializeState = (currentKey: string) => {
-		const internal = $state({ currentKey });
-		const query = $state({
-			loading: false,
-			error: undefined as E | undefined,
-			data: options?.initialData,
-			staleTimeStamp: undefined as number | undefined
-		});
-
-		$effect(() => {
-			query.loading = !!loadingByKey[internal.currentKey];
-		});
-
-		$effect(() => {
-			query.data =
-				internal.currentKey in dataByKey
-					? (dataByKey[internal.currentKey] as T)
-					: options?.initialData;
-		});
-
-		$effect(() => {
-			query.error = errorByKey[internal.currentKey] as E | undefined;
-		});
-
-		$effect(() => {
-			query.staleTimeStamp = staleTimeStampByKey[internal.currentKey];
-		});
-
-		return {
-			internal,
-			query
-		};
-	};
-
 	const loadData = async (queryParam: P) => {
 		const cacheKey = generateKey(key, queryParam).join('__');
 
@@ -144,25 +110,56 @@ export function createQuery<E, P = void, T = unknown>(
 	};
 
 	return (queryParam: P) => {
-		const cacheKey = generateKey(key, queryParam).join('__');
-		const { internal, query } = initializeState(cacheKey);
+		const internalState = $state({
+			currentKey: generateKey(key, queryParam).join('__')
+		});
+
+		const queryState = $state({
+			loading: false,
+			error: undefined as E | undefined,
+			data: options?.initialData,
+			staleTimeStamp: undefined as number | undefined
+		});
 
 		$effect(() => {
-			const currentKey = generateKey(key, queryParam);
-			const cacheKey = currentKey.join('__');
-			internal.currentKey = cacheKey;
+			// Update loading whenever the key or the referenced data change
+			queryState.loading = !!loadingByKey[internalState.currentKey];
+		});
+
+		$effect(() => {
+			// Update data whenever the key or the referenced data change
+			queryState.data =
+				(dataByKey[internalState.currentKey] as T | undefined) ??
+				options?.initialData;
+		});
+
+		$effect(() => {
+			// Update error wwhenever the key or the referenced data change
+			queryState.error = errorByKey[internalState.currentKey] as E | undefined;
+		});
+
+		$effect(() => {
+			// Update staleTimeStamp whenever kwhenever the key or the referenced data change
+			queryState.staleTimeStamp = staleTimeStampByKey[internalState.currentKey];
+		});
+
+		$effect(() => {
+			// Reset state and run the query loader when the queryParam changes
+			const cacheKey = generateKey(key, queryParam).join('__');
+
+			internalState.currentKey = cacheKey;
 
 			untrack(() => {
 				activeQueryCounts[cacheKey] = (activeQueryCounts[cacheKey] ?? 0) + 1;
 			});
 
 			const frozenQueryParam = $state.snapshot(queryParam) as P;
-			const queryLoaderInstance = () => {
+			const queryLoaderWithParam = () => {
 				loadData(frozenQueryParam);
 			};
 
 			untrack(() => {
-				queriesByKey[cacheKey] = queryLoaderInstance;
+				querieLoaderByKey[cacheKey] = queryLoaderWithParam;
 			});
 
 			const alreadyLoading = untrack(() => loadingByKey[cacheKey]);
@@ -172,10 +169,11 @@ export function createQuery<E, P = void, T = unknown>(
 			});
 
 			if (staleOrNew && !alreadyLoading) {
-				queryLoaderInstance();
+				queryLoaderWithParam();
 			}
 
 			return () => {
+				// Decrement the active query count when the query is destroyed
 				untrack(() => {
 					activeQueryCounts[cacheKey] = Math.max(
 						(activeQueryCounts[cacheKey] ?? 0) - 1,
@@ -185,16 +183,11 @@ export function createQuery<E, P = void, T = unknown>(
 			};
 		});
 
-		const reload = () => {
-			queriesByKey[internal.currentKey]?.();
-		};
-
 		return {
-			query,
-			/**
-			 * reloades the query.
-			 */
-			reload
+			query: queryState,
+			reload: () => {
+				querieLoaderByKey[internalState.currentKey]?.();
+			}
 		};
 	};
 }
