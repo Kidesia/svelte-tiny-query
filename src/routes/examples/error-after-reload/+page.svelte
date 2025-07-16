@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createQuery } from '$lib/svelte-tiny-query/query.svelte.ts';
+	import { createQuery } from '$lib/svelte-tiny-query/query.svelte';
 
 	let i = $state(0);
 

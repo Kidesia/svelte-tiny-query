@@ -1,7 +1,7 @@
 import { untrack } from 'svelte';
 
-import { generateKey } from './utils.ts';
-import type { LoadResult } from './loadHelpers.ts';
+import { generateKey } from './utils.js';
+import type { LoadResult } from './loadHelpers.js';
 import {
 	queryLoaderByKey,
 	loadingByKey,
@@ -10,7 +10,7 @@ import {
 	staleTimeStampByKey,
 	activeQueryCounts,
 	globalLoading
-} from './cache.svelte.ts';
+} from './cache.svelte';
 
 /**
  * Represents the current state of a query.
