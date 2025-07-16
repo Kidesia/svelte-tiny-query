@@ -13,7 +13,6 @@
 		"strict": true,
 		// "noUncheckedIndexedAccess": true,
 		"noImplicitOverride": true,
-		"allowImportingTsExtensions": true,
-
+		"allowImportingTsExtensions": true
 	}
 }
