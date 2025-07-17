@@ -5,7 +5,7 @@ import {
 	errorByKey,
 	staleTimeStampByKey,
 	activeQueryCounts
-} from './cache.svelte.ts';
+} from './cache.svelte';
 
 /**
  * Invalidates queries based on the provided key.
