@@ -7,6 +7,7 @@ import {
 	loadingByKey,
 	dataByKey,
 	errorByKey,
+	loadedTimeStampByKey,
 	staleTimeStampByKey,
 	activeQueryCounts,
 	globalLoading
@@ -24,6 +25,8 @@ type QueryState<TData, TError> = {
 	error: TError | undefined;
 	/** The data returned by the query. This can be `undefined` if `initialData` was not provided and the query hasn't loaded yet. */
 	data: TData;
+	/** The timestamp when the data was fetched, or `undefined` if the data hasn't been loaded yet. */
+	loadedTimeStamp: number | undefined;
 	/** The timestamp when the data will be considered stale, or `undefined` if no staleTime is set or data hasn't loaded. */
 	staleTimeStamp: number | undefined;
 };
@@ -122,6 +125,7 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 		const loadResult = await loadFn(queryParam);
 		if (loadResult.success) {
 			dataByKey[cacheKey] = loadResult.data;
+			loadedTimeStampByKey[cacheKey] = +new Date();
 			staleTimeStampByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
 		} else {
 			errorByKey[cacheKey] = loadResult.error;
@@ -140,6 +144,7 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 			loading: false,
 			error: undefined as TError | undefined,
 			data: options?.initialData,
+			loadedTimeStamp: undefined as number | undefined,
 			staleTimeStamp: undefined as number | undefined
 		});
 
@@ -160,6 +165,11 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 			queryState.error = errorByKey[internalState.currentKey] as
 				| TError
 				| undefined;
+		});
+
+		$effect(() => {
+			// Update loadedTimeStamp whenever the key or the referenced data change
+			queryState.loadedTimeStamp = loadedTimeStampByKey[internalState.currentKey];
 		});
 
 		$effect(() => {

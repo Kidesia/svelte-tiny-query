@@ -8,7 +8,8 @@ import {
 	errorByKey,
 	activeQueryCounts,
 	globalLoading,
-	fetchedTimeStampByKey
+	loadedTimeStampByKey,
+	staleTimeStampByKey
 } from './cache.svelte';
 
 // Types
@@ -29,6 +30,7 @@ type QueryState<TData, TError> = {
 	hasMore: boolean | undefined;
 	data: TData[] | undefined;
 	error: TError | undefined;
+	staleTimeStamp: number | undefined;
 };
 
 // States
@@ -49,7 +51,11 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 	loadFn: (
 		queryParam: TParam,
 		cursor?: TCursor
-	) => Promise<SequentialLoadResult<TData, TCursor, TError>>
+	) => Promise<SequentialLoadResult<TData, TCursor, TError>>,
+	options?: {
+		initialData?: TData;
+		staleTime?: number;
+	}
 ): (queryParam: TParam) => {
 	query: QueryState<TData, TError>;
 	loadMore: () => void;
@@ -70,7 +76,8 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		if (loadResult.success) {
 			if (Array.isArray(dataByKey[cacheKey]) && !reload) {
 				dataByKey[cacheKey].push(loadResult.data);
-				fetchedTimeStampByKey[cacheKey] = +new Date();
+				loadedTimeStampByKey[cacheKey] = +new Date();
+				staleTimeStampByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
 			} else {
 				dataByKey[cacheKey] = [loadResult.data];
 			}
@@ -98,7 +105,8 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 			loading: false,
 			hasMore: undefined,
 			data: undefined,
-			error: undefined
+			error: undefined,
+			staleTimeStamp: undefined
 		});
 
 		$effect(() => {
@@ -121,6 +129,11 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		});
 
 		$effect(() => {
+			// Update staleTimeStamp whenever the key or the referenced data change
+			queryState.staleTimeStamp = staleTimeStampByKey[internalState.currentKey];
+		});
+
+		$effect(() => {
 			// Update hasMore whenever the key or the referenced data change
 			queryState.hasMore = hasMoreByKey[internalState.currentKey];
 		});
@@ -140,7 +153,7 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 				internalState.currentKey = cacheKey;
 
 				const alreadyLoading = loadingByKey[cacheKey];
-				const notFetchedYet = !fetchedTimeStampByKey[cacheKey];
+				const notFetchedYet = !loadedTimeStampByKey[cacheKey];
 
 				if (!alreadyLoading && notFetchedYet) {
 					queryLoaderWithParam();

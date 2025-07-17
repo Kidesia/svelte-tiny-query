@@ -30,6 +30,7 @@ describe('createQuery', () => {
 				data: undefined,
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
 			// After loading
@@ -37,6 +38,7 @@ describe('createQuery', () => {
 				data: 'payload',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			}
 		]);
@@ -69,6 +71,7 @@ describe('createQuery', () => {
 				data: 'initial data',
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
 			// After loading
@@ -76,6 +79,7 @@ describe('createQuery', () => {
 				data: 'updated data',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			}
 		]);
@@ -105,6 +109,7 @@ describe('createQuery', () => {
 				data: undefined,
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
 			// After loading
@@ -112,6 +117,7 @@ describe('createQuery', () => {
 				data: undefined,
 				error: 'oopsie',
 				loading: false,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			}
 		]);
@@ -157,6 +163,7 @@ describe('createQuery', () => {
 				data: undefined,
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
 			// After loading
@@ -164,6 +171,7 @@ describe('createQuery', () => {
 				data: 'lucky you',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			},
 			// Refetching
@@ -171,6 +179,7 @@ describe('createQuery', () => {
 				data: 'lucky you',
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			},
 			// After error (still has previous data)
@@ -178,6 +187,7 @@ describe('createQuery', () => {
 				data: 'lucky you',
 				error: 'oopsie',
 				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			}
 		]);
@@ -226,12 +236,14 @@ describe('createQuery', () => {
 				data: undefined,
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
 			{
 				data: 'id is 1',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			},
 			// incrementing to id 2
@@ -239,12 +251,14 @@ describe('createQuery', () => {
 				data: undefined,
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
 			{
 				data: 'id is 2',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 1000,
 				staleTimeStamp: mockDate.getTime() + 1000
 			},
 			// decrementing back to id 1
@@ -252,12 +266,14 @@ describe('createQuery', () => {
 				data: 'id is 1',
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			},
 			{
 				data: 'id is 1',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 2000,
 				staleTimeStamp: mockDate.getTime() + 2000
 			}
 		]);
@@ -322,12 +338,14 @@ describe('createQuery', () => {
 				data: undefined,
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
 			{
 				data: 'id is 1',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: expectedStaleTime
 			},
 			// incrementing to id 2
@@ -335,12 +353,14 @@ describe('createQuery', () => {
 				data: undefined,
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
 			{
 				data: 'id is 2',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 1000,
 				staleTimeStamp: expectedStaleTime + 1000
 			},
 			// decrementing back to id 1 (not stale yet)
@@ -348,6 +368,7 @@ describe('createQuery', () => {
 				data: 'id is 1',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: expectedStaleTime
 			},
 			// incrementing to id 2 (not stale yet)
@@ -355,6 +376,7 @@ describe('createQuery', () => {
 				data: 'id is 2',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 1000,
 				staleTimeStamp: expectedStaleTime + 1000
 			},
 			// decrementing back to id 1 (now stale!)
@@ -362,12 +384,14 @@ describe('createQuery', () => {
 				data: 'id is 1',
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: expectedStaleTime
 			},
 			{
 				data: 'id is 1',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 4000,
 				staleTimeStamp: expectedStaleTime + 4000
 			}
 		]);
@@ -427,12 +451,14 @@ describe('createQuery', () => {
 				data: undefined,
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
 			{
 				data: 'id is 1',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime() + 2000
 			},
 			// incrementing to id 2
@@ -440,12 +466,14 @@ describe('createQuery', () => {
 				data: undefined,
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
 			{
 				data: 'id is 2',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 1000,
 				staleTimeStamp: mockDate.getTime() + 3000
 			}
 		]);
@@ -456,12 +484,14 @@ describe('createQuery', () => {
 				data: undefined,
 				error: undefined,
 				loading: true,
+				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
 			{
 				data: 'id is 1',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime() + 2000
 			},
 			// incrementing to id 2 (from cache)
@@ -469,6 +499,7 @@ describe('createQuery', () => {
 				data: 'id is 2',
 				error: undefined,
 				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 1000,
 				staleTimeStamp: mockDate.getTime() + 3000
 			}
 		]);
