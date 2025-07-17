@@ -156,14 +156,14 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 		});
 
 		$effect(() => {
-			// Update error wwhenever the key or the referenced data change
+			// Update error whenever the key or the referenced data change
 			queryState.error = errorByKey[internalState.currentKey] as
 				| TError
 				| undefined;
 		});
 
 		$effect(() => {
-			// Update staleTimeStamp whenever kwhenever the key or the referenced data change
+			// Update staleTimeStamp whenever the key or the referenced data change
 			queryState.staleTimeStamp = staleTimeStampByKey[internalState.currentKey];
 		});
 

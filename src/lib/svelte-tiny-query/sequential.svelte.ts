@@ -6,9 +6,9 @@ import {
 	loadingByKey,
 	dataByKey,
 	errorByKey,
-	staleTimeStampByKey,
 	activeQueryCounts,
-	globalLoading
+	globalLoading,
+	fetchedTimeStampByKey
 } from './cache.svelte';
 
 // Types
@@ -55,40 +55,6 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 	loadMore: () => void;
 	reload: () => void;
 } {
-	const initializeState = (currentKey: string) => {
-		const internal = $state({ currentKey });
-		const query: QueryState<TData, TError> = $state({
-			loading: false,
-			hasMore: undefined,
-			data: undefined,
-			error: undefined
-		});
-
-		$effect(() => {
-			query.loading = !!loadingByKey[internal.currentKey];
-		});
-
-		$effect(() => {
-			query.data =
-				internal.currentKey in dataByKey
-					? (dataByKey[internal.currentKey] as TData[])
-					: undefined;
-		});
-
-		$effect(() => {
-			query.error = errorByKey[internal.currentKey] as TError | undefined;
-		});
-
-		$effect(() => {
-			query.hasMore = hasMoreByKey[internal.currentKey];
-		});
-
-		return {
-			internal,
-			query
-		};
-	};
-
 	const loadData = async (queryParam: TParam, reload = false) => {
 		const cacheKey = generateKey(key, queryParam).join('__');
 
@@ -104,6 +70,7 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		if (loadResult.success) {
 			if (Array.isArray(dataByKey[cacheKey]) && !reload) {
 				dataByKey[cacheKey].push(loadResult.data);
+				fetchedTimeStampByKey[cacheKey] = +new Date();
 			} else {
 				dataByKey[cacheKey] = [loadResult.data];
 			}
@@ -123,61 +90,80 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 	};
 
 	return (queryParam: TParam) => {
-		const cacheKey = generateKey(key, queryParam).join('__');
-		const { internal, query } = initializeState(cacheKey);
+		const internalState = $state({
+			currentKey: generateKey(key, queryParam).join('__')
+		});
+
+		const queryState: QueryState<TData, TError> = $state({
+			loading: false,
+			hasMore: undefined,
+			data: undefined,
+			error: undefined
+		});
 
 		$effect(() => {
-			const currentKey = generateKey(key, queryParam);
-			const cacheKey = currentKey.join('__');
-			internal.currentKey = cacheKey;
+			// Update loading whenever the key or the referenced data change
+			queryState.loading = !!loadingByKey[internalState.currentKey];
+		});
+
+		$effect(() => {
+			// Update data whenever the key or the referenced data change
+			queryState.data = dataByKey[internalState.currentKey] as
+				| TData[]
+				| undefined;
+		});
+
+		$effect(() => {
+			// Update error whenever the key or the referenced data change
+			queryState.error = errorByKey[internalState.currentKey] as
+				| TError
+				| undefined;
+		});
+
+		$effect(() => {
+			// Update hasMore whenever the key or the referenced data change
+			queryState.hasMore = hasMoreByKey[internalState.currentKey];
+		});
+
+		$effect(() => {
+			// Reset state and run the query loader when the queryParam changes
+			const cacheKey = generateKey(key, queryParam).join('__');
 
 			untrack(() => {
+				const frozenQueryParam = $state.snapshot(queryParam) as TParam;
+				const queryLoaderWithParam = () => {
+					loadData(frozenQueryParam);
+				};
+
 				activeQueryCounts[cacheKey] = (activeQueryCounts[cacheKey] ?? 0) + 1;
+				queryLoaderByKey[cacheKey] = queryLoaderWithParam;
+				internalState.currentKey = cacheKey;
+
+				const alreadyLoading = loadingByKey[cacheKey];
+				const notFetchedYet = !fetchedTimeStampByKey[cacheKey];
+
+				if (!alreadyLoading && notFetchedYet) {
+					queryLoaderWithParam();
+				}
 			});
-
-			const frozenQueryParam = $state.snapshot(queryParam) as TParam;
-			const queryLoaderInstance = () => {
-				loadData(frozenQueryParam);
-			};
-
-			untrack(() => {
-				queryLoaderByKey[cacheKey] = queryLoaderInstance;
-			});
-
-			const alreadyLoading = untrack(() => loadingByKey[cacheKey]);
-			const staleOrNew = untrack(() => {
-				const staleTime = staleTimeStampByKey[cacheKey];
-				return staleTime ? staleTime < +new Date() : true;
-			});
-
-			if (staleOrNew && !alreadyLoading) {
-				queryLoaderInstance();
-			}
 
 			return () => {
-				untrack(() => {
-					activeQueryCounts[cacheKey] = Math.max(
-						(activeQueryCounts[cacheKey] ?? 0) - 1,
-						0
-					);
-				});
+				// Decrement the active query count when the query is destroyed
+				activeQueryCounts[cacheKey] = Math.max(
+					(activeQueryCounts[cacheKey] ?? 0) - 1,
+					0
+				);
 			};
 		});
 
 		return {
-			query,
-			/**
-			 * Reloads the query.
-			 */
+			query: queryState,
 			reload: () => {
-				if (query.loading || !query.hasMore) return;
+				if (queryState.loading || !queryState.hasMore) return;
 				loadData(queryParam, true);
 			},
-			/**
-			 * Loads more data if available.
-			 */
 			loadMore: () => {
-				if (query.loading || !query.hasMore) return;
+				if (queryState.loading || !queryState.hasMore) return;
 				loadData(queryParam, false);
 			}
 		};
