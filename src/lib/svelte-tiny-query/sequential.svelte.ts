@@ -64,13 +64,11 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 	const loadData = async (queryParam: TParam, reload = false) => {
 		const cacheKey = generateKey(key, queryParam).join('__');
 
-		untrack(() => {
-			errorByKey[cacheKey] = undefined;
-			loadingByKey[cacheKey] = true;
-			globalLoading.count++;
-		});
+		errorByKey[cacheKey] = undefined;
+		loadingByKey[cacheKey] = true;
+		globalLoading.count++;
 
-		const cursor = untrack(() => cursorByKey[cacheKey] as TCursor | undefined);
+		const cursor = cursorByKey[cacheKey] as TCursor | undefined;
 		const loadResult = await loadFn(queryParam, !reload ? cursor : undefined);
 
 		if (loadResult.success) {
@@ -82,18 +80,14 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 				dataByKey[cacheKey] = [loadResult.data];
 			}
 
-			untrack(() => {
-				cursorByKey[cacheKey] = loadResult.cursor;
-				hasMoreByKey[cacheKey] = loadResult.cursor !== undefined;
-			});
+			cursorByKey[cacheKey] = loadResult.cursor;
+			hasMoreByKey[cacheKey] = loadResult.cursor !== undefined;
 		} else {
 			errorByKey[cacheKey] = loadResult.error;
 		}
 
-		untrack(() => {
-			loadingByKey[cacheKey] = false;
-			globalLoading.count--;
-		});
+		loadingByKey[cacheKey] = false;
+		globalLoading.count--;
 	};
 
 	return (queryParam: TParam) => {
