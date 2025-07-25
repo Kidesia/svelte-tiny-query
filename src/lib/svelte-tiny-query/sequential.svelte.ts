@@ -149,6 +149,7 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 				const alreadyLoading = loadingByKey[cacheKey];
 				const notFetchedYet = !loadedTimeStampByKey[cacheKey];
 
+				// We never consider sequential queries as stale (TODO: do!), so we don't check the staleTimeStamp here.
 				if (!alreadyLoading && notFetchedYet) {
 					queryLoaderWithParam();
 				}
@@ -166,7 +167,8 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		return {
 			query: queryState,
 			reload: () => {
-				if (queryState.loading || !queryState.hasMore) return;
+				// TODO: allow reloading while its already loading (should then abort the previous request)
+				if (queryState.loading) return;
 				loadData(queryParam, true);
 			},
 			loadMore: () => {

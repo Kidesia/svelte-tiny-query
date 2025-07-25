@@ -1,6 +1,6 @@
 {
 	"name": "svelte-tiny-query",
-	"version": "0.1.11",
+	"version": "0.1.12",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/Kidesia/svelte-tiny-query.git"
