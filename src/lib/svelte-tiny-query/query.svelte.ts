@@ -169,7 +169,8 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 
 		$effect(() => {
 			// Update loadedTimeStamp whenever the key or the referenced data change
-			queryState.loadedTimeStamp = loadedTimeStampByKey[internalState.currentKey];
+			queryState.loadedTimeStamp =
+				loadedTimeStampByKey[internalState.currentKey];
 		});
 
 		$effect(() => {
