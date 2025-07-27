@@ -21,7 +21,7 @@ type SequentialLoadSuccess<TData, TCursor> = {
 };
 type LoadFailure<TError> = { success: false; error: TError };
 
-type SequentialLoadResult<TData, TCursor, TError> =
+export type SequentialLoadResult<TData, TCursor, TError> =
 	| SequentialLoadSuccess<TData, TCursor>
 	| LoadFailure<TError>;
 
@@ -30,6 +30,7 @@ type QueryState<TData, TError> = {
 	hasMore: boolean | undefined;
 	data: TData[] | undefined;
 	error: TError | undefined;
+	loadedTimeStamp: number | undefined;
 	staleTimeStamp: number | undefined;
 };
 
@@ -74,14 +75,14 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		if (loadResult.success) {
 			if (Array.isArray(dataByKey[cacheKey]) && !reload) {
 				dataByKey[cacheKey].push(loadResult.data);
-				loadedTimeStampByKey[cacheKey] = +new Date();
-				staleTimeStampByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
 			} else {
 				dataByKey[cacheKey] = [loadResult.data];
 			}
 
 			cursorByKey[cacheKey] = loadResult.cursor;
 			hasMoreByKey[cacheKey] = loadResult.cursor !== undefined;
+			loadedTimeStampByKey[cacheKey] = +new Date();
+			staleTimeStampByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
 		} else {
 			errorByKey[cacheKey] = loadResult.error;
 		}
@@ -100,6 +101,7 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 			hasMore: undefined,
 			data: undefined,
 			error: undefined,
+			loadedTimeStamp: undefined,
 			staleTimeStamp: undefined
 		});
 
@@ -120,6 +122,12 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 			queryState.error = errorByKey[internalState.currentKey] as
 				| TError
 				| undefined;
+		});
+
+		$effect(() => {
+			// Update loadedTimeStamp whenever the key or the referenced data change
+			queryState.loadedTimeStamp =
+				loadedTimeStampByKey[internalState.currentKey];
 		});
 
 		$effect(() => {
