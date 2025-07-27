@@ -3,11 +3,13 @@
 	import { createQuery, type LoadResult } from '../../src/lib/index.ts';
 
 	let {
-		states,
+		suffix = '',
+		states = $bindable(),
 		key,
 		loadingFn,
 		queryOptions
 	}: {
+		suffix?: string;
 		states: { value: unknown[] };
 		key: string[];
 		loadingFn: () => Promise<LoadResult<unknown, unknown>>;
@@ -26,8 +28,7 @@
 	});
 </script>
 
-<button onclick={reload}>Reload</button>
-
-<div>Loading: {query.loading}</div>
-<div>Error: {query.error}</div>
-<div>Data: {query.data ?? ''}</div>
+<button onclick={reload}>Reload{suffix}</button>
+<div>Loading{suffix}: {query.loading}</div>
+<div>Error{suffix}: {query.error}</div>
+<div>Data{suffix}: {query.data ?? ''}</div>

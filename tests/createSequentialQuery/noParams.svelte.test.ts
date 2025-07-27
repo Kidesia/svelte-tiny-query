@@ -48,7 +48,7 @@ describe('Sequential Query - No Parameter', () => {
 		]);
 	});
 
-	test('Error in first load', async () => {
+	test('Error loading first load', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
@@ -207,7 +207,7 @@ describe('Sequential Query - No Parameter', () => {
 		]);
 	});
 
-	test('Error in load more', async () => {
+	test('Error while loading more data', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
@@ -288,7 +288,7 @@ describe('Sequential Query - No Parameter', () => {
 		]);
 	});
 
-	test('Loads more then reloads', async () => {
+	test('Reloads after multiple pages loaded', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
@@ -391,7 +391,7 @@ describe('Sequential Query - No Parameter', () => {
 		]);
 	});
 
-	test('Error in reload', async () => {
+	test('Error while reloading', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
