@@ -194,7 +194,7 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 
 				const alreadyLoading = loadingByKey[cacheKey];
 				const notFetchedYet = !staleTimeStampByKey[cacheKey];
-				const staleData = staleTimeStampByKey[cacheKey] < +new Date();
+				const staleData = staleTimeStampByKey[cacheKey] <= +new Date();
 
 				if (!alreadyLoading && (notFetchedYet || staleData)) {
 					queryLoaderWithParam();
