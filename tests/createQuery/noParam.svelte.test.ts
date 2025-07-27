@@ -413,7 +413,7 @@ describe('Normal Query - No Parameter', () => {
 			// Hiding (nothing happens)
 			// Showing again (not stale, nothing happens)
 			// Hiding again (nothing happens)
-			// Showing again (now stale, reloads data)
+			// TODO: why this state? it is not there on states2
 			{
 				data: 'data',
 				error: undefined,
@@ -421,6 +421,7 @@ describe('Normal Query - No Parameter', () => {
 				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime() + 3000
 			},
+			// Showing again (now stale, reloads data)
 			{
 				data: 'data',
 				error: undefined,
