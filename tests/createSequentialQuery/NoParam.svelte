@@ -19,7 +19,7 @@
 		) => Promise<SequentialLoadResult<unknown, number | undefined, unknown>>;
 		queryOptions?: {
 			staleTime?: number;
-			initialData?: unknown;
+			initialData?: unknown[];
 		};
 	} = $props();
 

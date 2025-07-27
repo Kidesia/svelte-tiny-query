@@ -54,7 +54,7 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		cursor?: TCursor
 	) => Promise<SequentialLoadResult<TData, TCursor, TError>>,
 	options?: {
-		initialData?: TData;
+		initialData?: TData[];
 		staleTime?: number;
 	}
 ): (queryParam: TParam) => {
@@ -92,52 +92,8 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 	};
 
 	return (queryParam: TParam) => {
-		const internalState = $state({
+		const state = $state({
 			currentKey: generateKey(key, queryParam).join('__')
-		});
-
-		const queryState: QueryState<TData, TError> = $state({
-			loading: false,
-			hasMore: undefined,
-			data: undefined,
-			error: undefined,
-			loadedTimeStamp: undefined,
-			staleTimeStamp: undefined
-		});
-
-		$effect(() => {
-			// Update loading whenever the key or the referenced data change
-			queryState.loading = !!loadingByKey[internalState.currentKey];
-		});
-
-		$effect(() => {
-			// Update data whenever the key or the referenced data change
-			queryState.data = dataByKey[internalState.currentKey] as
-				| TData[]
-				| undefined;
-		});
-
-		$effect(() => {
-			// Update error whenever the key or the referenced data change
-			queryState.error = errorByKey[internalState.currentKey] as
-				| TError
-				| undefined;
-		});
-
-		$effect(() => {
-			// Update loadedTimeStamp whenever the key or the referenced data change
-			queryState.loadedTimeStamp =
-				loadedTimeStampByKey[internalState.currentKey];
-		});
-
-		$effect(() => {
-			// Update staleTimeStamp whenever the key or the referenced data change
-			queryState.staleTimeStamp = staleTimeStampByKey[internalState.currentKey];
-		});
-
-		$effect(() => {
-			// Update hasMore whenever the key or the referenced data change
-			queryState.hasMore = hasMoreByKey[internalState.currentKey];
 		});
 
 		$effect(() => {
@@ -152,7 +108,7 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 
 				activeQueryCounts[cacheKey] = (activeQueryCounts[cacheKey] ?? 0) + 1;
 				queryLoaderByKey[cacheKey] = queryLoaderWithParam;
-				internalState.currentKey = cacheKey;
+				state.currentKey = cacheKey;
 
 				const alreadyLoading = loadingByKey[cacheKey];
 				const notFetchedYet = !loadedTimeStampByKey[cacheKey];
@@ -173,14 +129,33 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		});
 
 		return {
-			query: queryState,
+			query: {
+				get loading() {
+					return !!loadingByKey[state.currentKey];
+				},
+				get data() {
+					return (
+						(dataByKey[state.currentKey] as TData[] | undefined) ??
+						options?.initialData
+					);
+				},
+				get hasMore() {
+					return hasMoreByKey[state.currentKey];
+				},
+				get error() {
+					return errorByKey[state.currentKey] as TError | undefined;
+				},
+				get loadedTimeStamp() {
+					return loadedTimeStampByKey[state.currentKey];
+				},
+				get staleTimeStamp() {
+					return staleTimeStampByKey[state.currentKey];
+				}
+			},
 			reload: () => {
-				// TODO: allow reloading while its already loading (should then abort the previous request)
-				if (queryState.loading) return;
 				loadData(queryParam, true);
 			},
 			loadMore: () => {
-				if (queryState.loading || !queryState.hasMore) return;
 				loadData(queryParam, false);
 			}
 		};
