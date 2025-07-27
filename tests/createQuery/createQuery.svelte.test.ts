@@ -1,9 +1,9 @@
 import { describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
-import TestContainerNoParam from './TestContainerNoParam.svelte';
-import TestContainerWithParam from './TestContainerWithParam.svelte';
-import TestContainerMultipleWithParams from './TestContainerMultipleWithParams.svelte';
+import NoParam from './NoParam.svelte';
+import WithParam from './WithParam.svelte';
+import MultipleWithParams from './MultipleWithParams.svelte';
 
 describe('createQuery', () => {
 	test('No param', async () => {
@@ -12,7 +12,7 @@ describe('createQuery', () => {
 		vi.setSystemTime(mockDate);
 
 		const states = $state({ value: [] });
-		const rendered = render(TestContainerNoParam, {
+		const rendered = render(NoParam, {
 			props: {
 				states,
 				key: ['successful-test'],
@@ -44,54 +44,13 @@ describe('createQuery', () => {
 		]);
 	});
 
-	test('Initial data', async () => {
-		vi.useFakeTimers();
-		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
-		vi.setSystemTime(mockDate);
-
-		const states = $state({ value: [] });
-		const rendered = render(TestContainerNoParam, {
-			props: {
-				states,
-				key: ['initial-data-test'],
-				loadingFn: async () => ({ success: true, data: 'updated data' }),
-				queryOptions: {
-					initialData: 'initial data'
-				}
-			}
-		});
-
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: updated data')).toBeInTheDocument();
-		});
-
-		expect(states.value).toEqual([
-			// Initial state (from initialData)
-			{
-				data: 'initial data',
-				error: undefined,
-				loading: true,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
-			// After loading
-			{
-				data: 'updated data',
-				error: undefined,
-				loading: false,
-				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
-			}
-		]);
-	});
-
 	test('Error', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
 
 		const states = $state({ value: [] });
-		const rendered = render(TestContainerNoParam, {
+		const rendered = render(NoParam, {
 			props: {
 				states,
 				key: ['failed-test'],
@@ -130,7 +89,7 @@ describe('createQuery', () => {
 
 		let i = $state(0);
 		const states = $state({ value: [] });
-		const rendered = render(TestContainerNoParam, {
+		const rendered = render(NoParam, {
 			props: {
 				states,
 				key: ['error-after-reload'],
@@ -199,7 +158,7 @@ describe('createQuery', () => {
 		vi.setSystemTime(mockDate);
 
 		const states = $state({ value: [] });
-		const rendered = render(TestContainerWithParam, {
+		const rendered = render(WithParam, {
 			props: {
 				states,
 				key: ['reactive-param-example'],
@@ -279,6 +238,47 @@ describe('createQuery', () => {
 		]);
 	});
 
+	test('Initial data', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['initial-data-test'],
+				loadingFn: async () => ({ success: true, data: 'updated data' }),
+				queryOptions: {
+					initialData: 'initial data'
+				}
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: updated data')).toBeInTheDocument();
+		});
+
+		expect(states.value).toEqual([
+			// Initial state (from initialData)
+			{
+				data: 'initial data',
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
+			// After loading
+			{
+				data: 'updated data',
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
+				staleTimeStamp: mockDate.getTime()
+			}
+		]);
+	});
+
 	test('Staletime', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
@@ -286,7 +286,7 @@ describe('createQuery', () => {
 		const expectedStaleTime = mockDate.getTime() + 3000;
 
 		const states = $state({ value: [] });
-		const rendered = render(TestContainerWithParam, {
+		const rendered = render(WithParam, {
 			props: {
 				states,
 				key: ['staletime-example'],
@@ -409,7 +409,7 @@ describe('createQuery', () => {
 
 		const states1 = $state({ value: [] });
 		const states2 = $state({ value: [] });
-		const rendered = render(TestContainerMultipleWithParams, {
+		const rendered = render(MultipleWithParams, {
 			props: {
 				states1,
 				states2,
