@@ -411,7 +411,6 @@ describe('Sequential Query - No Parameter', () => {
 							cursor: cursor + 10
 						};
 					} else {
-						console.log('error loading data');
 						return {
 							success: false,
 							error: 'Error reloading data'

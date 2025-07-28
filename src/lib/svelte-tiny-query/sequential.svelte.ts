@@ -62,7 +62,7 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 	loadMore: () => void;
 	reload: () => void;
 } {
-	const loadData = async (queryParam: TParam, reload = false) => {
+	const loadData = async (queryParam: TParam, resetPages = false) => {
 		const cacheKey = generateKey(key, queryParam).join('__');
 
 		errorByKey[cacheKey] = undefined;
@@ -70,10 +70,13 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		globalLoading.count++;
 
 		const cursor = cursorByKey[cacheKey] as TCursor | undefined;
-		const loadResult = await loadFn(queryParam, !reload ? cursor : undefined);
+		const loadResult = await loadFn(
+			queryParam,
+			!resetPages ? cursor : undefined
+		);
 
 		if (loadResult.success) {
-			if (Array.isArray(dataByKey[cacheKey]) && !reload) {
+			if (Array.isArray(dataByKey[cacheKey]) && !resetPages) {
 				dataByKey[cacheKey].push(loadResult.data);
 			} else {
 				dataByKey[cacheKey] = [loadResult.data];
@@ -102,8 +105,21 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 
 			untrack(() => {
 				const frozenQueryParam = $state.snapshot(queryParam) as TParam;
-				const queryLoaderWithParam = () => {
-					loadData(frozenQueryParam);
+				const queryLoaderWithParam = async () => {
+					await loadData(frozenQueryParam, true);
+
+					// TODO: test this behaviour
+					// if (
+					// 	Array.isArray(dataByKey[cacheKey]) &&
+					// 	dataByKey[cacheKey].length > 0
+					// ) {
+					// 	const numPages = dataByKey[cacheKey].length;
+					// 	let i = 1;
+					// 	while (i < numPages) {
+					// 		await loadData(frozenQueryParam, false);
+					// 		i++;
+					// 	}
+					// }
 				};
 
 				activeQueryCounts[cacheKey] = (activeQueryCounts[cacheKey] ?? 0) + 1;
