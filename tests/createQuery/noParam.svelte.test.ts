@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
+import { invalidateQueries } from '../../src/lib/svelte-tiny-query/invalidate.svelte';
 import NoParam from './NoParam.svelte';
 import MultipleNoParam from './MultipleNoParam.svelte';
 
@@ -411,9 +412,7 @@ describe('Normal Query - No Parameter', () => {
 				staleTimeStamp: mockDate.getTime() + 3000
 			},
 			// Hiding (nothing happens)
-			// Showing again (not stale, nothing happens)
-			// Hiding again (nothing happens)
-			// TODO: why this state? it is not there on states2
+			// Showing again (not stale, no reload, but old data is newly initialized)
 			{
 				data: 'data',
 				error: undefined,
@@ -421,6 +420,7 @@ describe('Normal Query - No Parameter', () => {
 				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime() + 3000
 			},
+			// Hiding again (nothing happens)
 			// Showing again (now stale, reloads data)
 			{
 				data: 'data',
@@ -439,8 +439,43 @@ describe('Normal Query - No Parameter', () => {
 			}
 		]);
 
-		// expect(states1.value).toEqual(states2.value);
-		// TODO: why is this not the same?
+		expect(states2.value).toEqual([
+			// Initial state
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
+			// After loading
+			{
+				data: 'data',
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
+				staleTimeStamp: mockDate.getTime() + 3000
+			},
+			// Hiding (nothing happens)
+			// Showing again (not stale, no reload, no need to newly initialize)
+			// Hiding again (nothing happens)
+			// Showing again (now stale, reloads data)
+			{
+				data: 'data',
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: mockDate.getTime(),
+				staleTimeStamp: mockDate.getTime() + 3000
+			},
+			// After reload
+			{
+				data: 'updated data',
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 4000,
+				staleTimeStamp: mockDate.getTime() + 7000
+			}
+		]);
 	});
 
 	test('Shares state between multiple instances', async () => {
@@ -528,5 +563,149 @@ describe('Normal Query - No Parameter', () => {
 
 		// The second instance has the same states (even if it was not reloaded)
 		expect(states1.value).toEqual(states2.value);
+	});
+
+	test('Reloads data when invalidated', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		let i = $state(0);
+		const states = $state({ value: [] });
+		const mockLoadingFn = vi.fn(async () => ({
+			success: true as const,
+			data: i++ === 0 ? 'data' : 'updated data'
+		}));
+
+		const rendered = render(NoParam, {
+			props: {
+				states: states,
+				key: ['simple-invalidate-test'],
+				loadingFn: mockLoadingFn
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: data')).toBeInTheDocument();
+		});
+
+		expect(mockLoadingFn).toHaveBeenCalledTimes(1);
+
+		vi.advanceTimersByTime(1000);
+		invalidateQueries(['simple-invalidate-test']);
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: updated data')).toBeInTheDocument();
+		});
+
+		expect(mockLoadingFn).toHaveBeenCalledTimes(2);
+
+		expect(states.value).toEqual([
+			// Initial state
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
+			// After loading
+			{
+				data: 'data',
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
+				staleTimeStamp: mockDate.getTime()
+			},
+			// Invalidating (reloads data)
+			{
+				data: 'data',
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: mockDate.getTime(),
+				// invalidating sets the stale time to now - 1
+				staleTimeStamp: mockDate.getTime() + 1000 - 1
+			},
+			// After reload
+			{
+				data: 'updated data',
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 1000,
+				staleTimeStamp: mockDate.getTime() + 1000
+			}
+		]);
+	});
+
+	test('Immediately forgets cached data when force-invalidated', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		let i = $state(0);
+		const states = $state({ value: [] });
+		const mockLoadingFn = vi.fn(async () => ({
+			success: true as const,
+			data: i++ === 0 ? 'data' : 'updated data'
+		}));
+
+		const rendered = render(NoParam, {
+			props: {
+				states: states,
+				key: ['force-invalidate-test'],
+				loadingFn: mockLoadingFn
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: data')).toBeInTheDocument();
+		});
+
+		expect(mockLoadingFn).toHaveBeenCalledTimes(1);
+
+		vi.advanceTimersByTime(1000);
+		invalidateQueries(['force-invalidate-test'], { force: true });
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: updated data')).toBeInTheDocument();
+		});
+
+		expect(mockLoadingFn).toHaveBeenCalledTimes(2);
+
+		expect(states.value).toEqual([
+			// Initial state
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
+			// After loading
+			{
+				data: 'data',
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
+				staleTimeStamp: mockDate.getTime()
+			},
+			// Force-invalidating (resets and reloads data)
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: mockDate.getTime(),
+				// invalidating sets the stale time to now - 1
+				staleTimeStamp: mockDate.getTime() + 1000 - 1
+			},
+			// After reload
+			{
+				data: 'updated data',
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 1000,
+				staleTimeStamp: mockDate.getTime() + 1000
+			}
+		]);
 	});
 });

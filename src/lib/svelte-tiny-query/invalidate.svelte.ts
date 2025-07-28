@@ -22,20 +22,21 @@ export function invalidateQueries(
 ) {
 	const cacheKey = key.join('__');
 
-	// marks all matching queries as stale
+	// Mark all matching queries as stale
 	Object.keys(staleTimeStampByKey).forEach((key) => {
 		if (options?.exact ? key === cacheKey : key.startsWith(cacheKey)) {
 			staleTimeStampByKey[key] = +new Date() - 1;
 		}
 	});
 
-	// reloads the matching currently active queries right away
+	// Reload the matching currently active queries right away
 	const queriesToInvalidate = Object.entries(activeQueryCounts).filter(
 		([key, usageCount]) =>
 			usageCount > 0 &&
 			(options?.exact ? key === cacheKey : key.startsWith(cacheKey))
 	);
 
+	// Reset the cache data of the matching queries if forced
 	queriesToInvalidate.forEach(([key]) => {
 		if (options?.force) {
 			loadingByKey[key] = false;
@@ -43,6 +44,7 @@ export function invalidateQueries(
 			errorByKey[key] = undefined;
 		}
 
+		// TODO: does that work for sequential queries?
 		queryLoaderByKey[key]?.();
 	});
 }
