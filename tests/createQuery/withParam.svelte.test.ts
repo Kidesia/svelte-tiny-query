@@ -5,7 +5,7 @@ import WithParam from './WithParam.svelte';
 import MultipleWithParams from './MultipleWithParams.svelte';
 
 describe('Normal Query - With Parameter', () => {
-	test('Reacts to parameter change', async () => {
+	test('Resets and reloads itself on parameter/key change', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
