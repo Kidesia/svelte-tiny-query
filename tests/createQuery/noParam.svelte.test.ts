@@ -297,43 +297,43 @@ describe('Normal Query - No Parameter', () => {
 			expect(rendered.queryByText('Data 1: updated data')).toBeInTheDocument();
 		});
 
-		expect(states1.value).toEqual([
-			// Initial state
-			{
-				data: undefined,
-				error: undefined,
-				loading: true,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
-			// After loading
-			{
-				data: 'shared data',
-				error: undefined,
-				loading: false,
-				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
-			},
-			// Hiding (nothing happens)
-			// Showing again (reloads data)
-			{
-				data: 'shared data',
-				error: undefined,
-				loading: true,
-				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
-			},
-			// After reload
-			{
-				data: 'updated data',
-				error: undefined,
-				loading: false,
-				loadedTimeStamp: mockDate.getTime() + 2000,
-				staleTimeStamp: mockDate.getTime() + 2000
-			}
-		]);
-
-		expect(states1.value).toEqual(states2.value);
+		[states1.value, states2.value].forEach((states) => {
+			expect(states1.value).toEqual([
+				// Initial state
+				{
+					data: undefined,
+					error: undefined,
+					loading: true,
+					loadedTimeStamp: undefined,
+					staleTimeStamp: undefined
+				},
+				// After loading
+				{
+					data: 'shared data',
+					error: undefined,
+					loading: false,
+					loadedTimeStamp: mockDate.getTime(),
+					staleTimeStamp: mockDate.getTime()
+				},
+				// Hiding (nothing happens)
+				// Showing again (reloads data)
+				{
+					data: 'shared data',
+					error: undefined,
+					loading: true,
+					loadedTimeStamp: mockDate.getTime(),
+					staleTimeStamp: mockDate.getTime()
+				},
+				// After reload
+				{
+					data: 'updated data',
+					error: undefined,
+					loading: false,
+					loadedTimeStamp: mockDate.getTime() + 2000,
+					staleTimeStamp: mockDate.getTime() + 2000
+				}
+			]);
+		});
 	});
 
 	test('Is not auto-reloaded when not stale', async () => {
@@ -526,43 +526,42 @@ describe('Normal Query - No Parameter', () => {
 		// Reloading triggers the loading function again
 		expect(mockLoadingFn).toHaveBeenCalledTimes(2);
 
-		expect(states1.value).toEqual([
-			// Initial state
-			{
-				data: undefined,
-				error: undefined,
-				loading: true,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
-			// After loading
-			{
-				data: 'shared data',
-				error: undefined,
-				loading: false,
-				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
-			},
-			// Reloading
-			{
-				data: 'shared data',
-				error: undefined,
-				loading: true,
-				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
-			},
-			// After reload
-			{
-				data: 'updated data',
-				error: undefined,
-				loading: false,
-				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
-			}
-		]);
-
-		// The second instance has the same states (even if it was not reloaded)
-		expect(states1.value).toEqual(states2.value);
+		[states1.value, states2.value].forEach((states) => {
+			expect(states).toEqual([
+				// Initial state
+				{
+					data: undefined,
+					error: undefined,
+					loading: true,
+					loadedTimeStamp: undefined,
+					staleTimeStamp: undefined
+				},
+				// After loading
+				{
+					data: 'shared data',
+					error: undefined,
+					loading: false,
+					loadedTimeStamp: mockDate.getTime(),
+					staleTimeStamp: mockDate.getTime()
+				},
+				// Reloading
+				{
+					data: 'shared data',
+					error: undefined,
+					loading: true,
+					loadedTimeStamp: mockDate.getTime(),
+					staleTimeStamp: mockDate.getTime()
+				},
+				// After reload
+				{
+					data: 'updated data',
+					error: undefined,
+					loading: false,
+					loadedTimeStamp: mockDate.getTime() + 1000,
+					staleTimeStamp: mockDate.getTime() + 1000
+				}
+			]);
+		});
 	});
 
 	test('Reloads data when invalidated', async () => {

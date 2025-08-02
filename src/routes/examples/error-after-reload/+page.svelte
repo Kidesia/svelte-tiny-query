@@ -10,10 +10,10 @@
 			: { success: false, error: 'Oopsie!' };
 	});
 
-	const { query, reload } = testQuery();
+	const query = testQuery();
 </script>
 
-<button onclick={reload}>Reload</button>
+<button onclick={query.reload}>Reload</button>
 
 <div>Loading: {query.loading}</div>
 <div>Error: {query.error}</div>
