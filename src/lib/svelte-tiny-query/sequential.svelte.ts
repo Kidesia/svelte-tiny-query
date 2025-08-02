@@ -21,7 +21,7 @@ type SequentialLoadSuccess<TData, TCursor> = {
 };
 type LoadFailure<TError> = { success: false; error: TError };
 
-type SequentialLoadResult<TData, TCursor, TError> =
+export type SequentialLoadResult<TData, TCursor, TError> =
 	| SequentialLoadSuccess<TData, TCursor>
 	| LoadFailure<TError>;
 
@@ -30,6 +30,7 @@ type QueryState<TData, TError> = {
 	hasMore: boolean | undefined;
 	data: TData[] | undefined;
 	error: TError | undefined;
+	loadedTimeStamp: number | undefined;
 	staleTimeStamp: number | undefined;
 };
 
@@ -53,7 +54,7 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		cursor?: TCursor
 	) => Promise<SequentialLoadResult<TData, TCursor, TError>>,
 	options?: {
-		initialData?: TData;
+		initialData?: TData[];
 		staleTime?: number;
 	}
 ): (queryParam: TParam) => {
@@ -61,7 +62,7 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 	loadMore: () => void;
 	reload: () => void;
 } {
-	const loadData = async (queryParam: TParam, reload = false) => {
+	const loadData = async (queryParam: TParam, resetPages = false) => {
 		const cacheKey = generateKey(key, queryParam).join('__');
 
 		errorByKey[cacheKey] = undefined;
@@ -69,19 +70,22 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		globalLoading.count++;
 
 		const cursor = cursorByKey[cacheKey] as TCursor | undefined;
-		const loadResult = await loadFn(queryParam, !reload ? cursor : undefined);
+		const loadResult = await loadFn(
+			queryParam,
+			!resetPages ? cursor : undefined
+		);
 
 		if (loadResult.success) {
-			if (Array.isArray(dataByKey[cacheKey]) && !reload) {
+			if (Array.isArray(dataByKey[cacheKey]) && !resetPages) {
 				dataByKey[cacheKey].push(loadResult.data);
-				loadedTimeStampByKey[cacheKey] = +new Date();
-				staleTimeStampByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
 			} else {
 				dataByKey[cacheKey] = [loadResult.data];
 			}
 
 			cursorByKey[cacheKey] = loadResult.cursor;
 			hasMoreByKey[cacheKey] = loadResult.cursor !== undefined;
+			loadedTimeStampByKey[cacheKey] = +new Date();
+			staleTimeStampByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
 		} else {
 			errorByKey[cacheKey] = loadResult.error;
 		}
@@ -91,45 +95,8 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 	};
 
 	return (queryParam: TParam) => {
-		const internalState = $state({
+		const state = $state({
 			currentKey: generateKey(key, queryParam).join('__')
-		});
-
-		const queryState: QueryState<TData, TError> = $state({
-			loading: false,
-			hasMore: undefined,
-			data: undefined,
-			error: undefined,
-			staleTimeStamp: undefined
-		});
-
-		$effect(() => {
-			// Update loading whenever the key or the referenced data change
-			queryState.loading = !!loadingByKey[internalState.currentKey];
-		});
-
-		$effect(() => {
-			// Update data whenever the key or the referenced data change
-			queryState.data = dataByKey[internalState.currentKey] as
-				| TData[]
-				| undefined;
-		});
-
-		$effect(() => {
-			// Update error whenever the key or the referenced data change
-			queryState.error = errorByKey[internalState.currentKey] as
-				| TError
-				| undefined;
-		});
-
-		$effect(() => {
-			// Update staleTimeStamp whenever the key or the referenced data change
-			queryState.staleTimeStamp = staleTimeStampByKey[internalState.currentKey];
-		});
-
-		$effect(() => {
-			// Update hasMore whenever the key or the referenced data change
-			queryState.hasMore = hasMoreByKey[internalState.currentKey];
 		});
 
 		$effect(() => {
@@ -138,13 +105,26 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 
 			untrack(() => {
 				const frozenQueryParam = $state.snapshot(queryParam) as TParam;
-				const queryLoaderWithParam = () => {
-					loadData(frozenQueryParam);
+				const queryLoaderWithParam = async () => {
+					await loadData(frozenQueryParam, true);
+
+					// TODO: test this behaviour
+					// if (
+					// 	Array.isArray(dataByKey[cacheKey]) &&
+					// 	dataByKey[cacheKey].length > 0
+					// ) {
+					// 	const numPages = dataByKey[cacheKey].length;
+					// 	let i = 1;
+					// 	while (i < numPages) {
+					// 		await loadData(frozenQueryParam, false);
+					// 		i++;
+					// 	}
+					// }
 				};
 
 				activeQueryCounts[cacheKey] = (activeQueryCounts[cacheKey] ?? 0) + 1;
 				queryLoaderByKey[cacheKey] = queryLoaderWithParam;
-				internalState.currentKey = cacheKey;
+				state.currentKey = cacheKey;
 
 				const alreadyLoading = loadingByKey[cacheKey];
 				const notFetchedYet = !loadedTimeStampByKey[cacheKey];
@@ -165,14 +145,33 @@ export function createSequentialQuery<TError, TData, TCursor, TParam = void>(
 		});
 
 		return {
-			query: queryState,
+			query: {
+				get loading() {
+					return !!loadingByKey[state.currentKey];
+				},
+				get data() {
+					return (
+						(dataByKey[state.currentKey] as TData[] | undefined) ??
+						options?.initialData
+					);
+				},
+				get hasMore() {
+					return hasMoreByKey[state.currentKey];
+				},
+				get error() {
+					return errorByKey[state.currentKey] as TError | undefined;
+				},
+				get loadedTimeStamp() {
+					return loadedTimeStampByKey[state.currentKey];
+				},
+				get staleTimeStamp() {
+					return staleTimeStampByKey[state.currentKey];
+				}
+			},
 			reload: () => {
-				// TODO: allow reloading while its already loading (should then abort the previous request)
-				if (queryState.loading) return;
 				loadData(queryParam, true);
 			},
 			loadMore: () => {
-				if (queryState.loading || !queryState.hasMore) return;
 				loadData(queryParam, false);
 			}
 		};

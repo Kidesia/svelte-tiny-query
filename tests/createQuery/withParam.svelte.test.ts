@@ -1,205 +1,17 @@
 import { describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
-import TestContainerNoParam from './TestContainerNoParam.svelte';
-import TestContainerWithParam from './TestContainerWithParam.svelte';
-import TestContainerMultipleWithParams from './TestContainerMultipleWithParams.svelte';
+import WithParam from './WithParam.svelte';
+import MultipleWithParams from './MultipleWithParams.svelte';
 
-describe('createQuery', () => {
-	test('No param', async () => {
+describe('Normal Query - With Parameter', () => {
+	test('Resets and reloads itself on parameter/key change', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
 
 		const states = $state({ value: [] });
-		const rendered = render(TestContainerNoParam, {
-			props: {
-				states,
-				key: ['successful-test'],
-				loadingFn: async () => ({ success: true, data: 'payload' })
-			}
-		});
-
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: payload')).toBeInTheDocument();
-		});
-
-		expect(states.value).toEqual([
-			// Initial state
-			{
-				data: undefined,
-				error: undefined,
-				loading: true,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
-			// After loading
-			{
-				data: 'payload',
-				error: undefined,
-				loading: false,
-				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
-			}
-		]);
-	});
-
-	test('Initial data', async () => {
-		vi.useFakeTimers();
-		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
-		vi.setSystemTime(mockDate);
-
-		const states = $state({ value: [] });
-		const rendered = render(TestContainerNoParam, {
-			props: {
-				states,
-				key: ['initial-data-test'],
-				loadingFn: async () => ({ success: true, data: 'updated data' }),
-				queryOptions: {
-					initialData: 'initial data'
-				}
-			}
-		});
-
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: updated data')).toBeInTheDocument();
-		});
-
-		expect(states.value).toEqual([
-			// Initial state (from initialData)
-			{
-				data: 'initial data',
-				error: undefined,
-				loading: true,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
-			// After loading
-			{
-				data: 'updated data',
-				error: undefined,
-				loading: false,
-				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
-			}
-		]);
-	});
-
-	test('Error', async () => {
-		vi.useFakeTimers();
-		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
-		vi.setSystemTime(mockDate);
-
-		const states = $state({ value: [] });
-		const rendered = render(TestContainerNoParam, {
-			props: {
-				states,
-				key: ['failed-test'],
-				loadingFn: async () => ({ success: false, error: 'oopsie' })
-			}
-		});
-
-		await waitFor(() => {
-			expect(rendered.queryByText('Error: oopsie')).toBeInTheDocument();
-		});
-
-		expect(states.value).toEqual([
-			// Initial state
-			{
-				data: undefined,
-				error: undefined,
-				loading: true,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
-			// After loading
-			{
-				data: undefined,
-				error: 'oopsie',
-				loading: false,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			}
-		]);
-	});
-
-	test('Error after reload', async () => {
-		vi.useFakeTimers();
-		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
-		vi.setSystemTime(mockDate);
-
-		let i = $state(0);
-		const states = $state({ value: [] });
-		const rendered = render(TestContainerNoParam, {
-			props: {
-				states,
-				key: ['error-after-reload'],
-				loadingFn: async () => {
-					i++;
-					return i % 2 === 1
-						? { success: true, data: 'lucky you' }
-						: { success: false, error: 'oopsie' };
-				}
-			}
-		});
-
-		await waitFor(() => {
-			expect(rendered.queryByText('Data: lucky you')).toBeInTheDocument();
-		});
-
-		vi.advanceTimersByTime(1000);
-		await waitFor(() => {
-			expect(rendered.queryByText('Reload')).toBeInTheDocument();
-		});
-		rendered.queryByText('Reload')?.click();
-
-		await waitFor(() => {
-			expect(rendered.queryByText('Error: oopsie')).toBeInTheDocument();
-		});
-
-		expect(states.value).toEqual([
-			// Initial state
-			{
-				data: undefined,
-				error: undefined,
-				loading: true,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
-			// After loading
-			{
-				data: 'lucky you',
-				error: undefined,
-				loading: false,
-				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
-			},
-			// Refetching
-			{
-				data: 'lucky you',
-				error: undefined,
-				loading: true,
-				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
-			},
-			// After error (still has previous data)
-			{
-				data: 'lucky you',
-				error: 'oopsie',
-				loading: false,
-				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
-			}
-		]);
-	});
-
-	test('Reactive param', async () => {
-		vi.useFakeTimers();
-		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
-		vi.setSystemTime(mockDate);
-
-		const states = $state({ value: [] });
-		const rendered = render(TestContainerWithParam, {
+		const rendered = render(WithParam, {
 			props: {
 				states,
 				key: ['reactive-param-example'],
@@ -279,14 +91,14 @@ describe('createQuery', () => {
 		]);
 	});
 
-	test('Staletime', async () => {
+	test('Is not auto-reloaded when not stale on parameter change', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
 		const expectedStaleTime = mockDate.getTime() + 3000;
 
 		const states = $state({ value: [] });
-		const rendered = render(TestContainerWithParam, {
+		const rendered = render(WithParam, {
 			props: {
 				states,
 				key: ['staletime-example'],
@@ -409,7 +221,7 @@ describe('createQuery', () => {
 
 		const states1 = $state({ value: [] });
 		const states2 = $state({ value: [] });
-		const rendered = render(TestContainerMultipleWithParams, {
+		const rendered = render(MultipleWithParams, {
 			props: {
 				states1,
 				states2,

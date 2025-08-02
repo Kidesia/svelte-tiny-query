@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { createQuery, type LoadResult } from '../src/lib/index.ts';
+	import { createQuery, type LoadResult } from '../../src/lib/index.ts';
 
 	let {
 		states,
