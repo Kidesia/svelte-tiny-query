@@ -21,14 +21,18 @@
 
 	const testQuery = createQuery(key, loadingFn, queryOptions);
 
-	const { query, reload } = testQuery();
+	const query = testQuery();
 
 	$effect(() => {
-		states.value = [...untrack(() => states.value), $state.snapshot(query)];
+		const { reload: _, ...queryValue } = query;
+		states.value = [...untrack(() => states.value), queryValue];
 	});
 </script>
 
-<button onclick={reload}>Reload{suffix}</button>
+<button onclick={query.reload}>Reload{suffix}</button>
 <div>Loading{suffix}: {query.loading}</div>
 <div>Error{suffix}: {query.error}</div>
 <div>Data{suffix}: {query.data ?? ''}</div>
+<div>
+	Loaded at{suffix}: {query.loadedTimeStamp ? +query.loadedTimeStamp : '-'}
+</div>
