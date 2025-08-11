@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { createQuery, type LoadResult } from '../../src/lib/index.ts';
+	import { captureState } from '../testHelpers.ts';
 
 	let {
 		states1,
@@ -28,12 +29,12 @@
 	const query2 = testQuery(param2);
 
 	$effect(() => {
-		const { reload: _, ...queryValue } = query1;
+		const queryValue = captureState(query1);
 		states1.value = [...untrack(() => states1.value), queryValue];
 	});
 
 	$effect(() => {
-		const { reload: _, ...queryValue } = query2;
+		const queryValue = captureState(query2);
 		states2.value = [...untrack(() => states2.value), queryValue];
 	});
 </script>

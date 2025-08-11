@@ -35,13 +35,21 @@ export type BaseQueryState<TData, TError> = {
 
 export function fromBaseQuery<TError, TParam = void, TData = unknown>(
 	key: string[] | ((queryParam: TParam) => string[]),
-	loadFn: (queryParam: TParam) => Promise<LoadResult<TData, TError>>,
+	loadFn: (
+		queryParam: TParam,
+		cacheKey: string,
+		mode: string,
+		currentData: TData | undefined
+	) => Promise<LoadResult<TData, TError>>,
 	queryParam: TParam,
 	options?: {
 		initialData?: TData;
 		staleTime?: number;
 	}
-): BaseQueryState<TData | undefined, TError> {
+): {
+	load: (mode?: string) => void;
+	external: BaseQueryState<TData | undefined, TError>;
+} {
 	const internalState = $state({
 		currentKey: generateKey(key, queryParam).join('__')
 	});
@@ -61,7 +69,7 @@ export function fromBaseQuery<TError, TParam = void, TData = unknown>(
 			if (!queryLoaderByKey[cacheKey]) {
 				const frozenQueryParam = $state.snapshot(queryParam) as TParam;
 
-				const queryLoaderWithParam = async () => {
+				const queryLoaderWithParam = async (mode = 'load') => {
 					const cacheKey = generateKey(key, queryParam).join('__');
 
 					const alreadyLoading = loadingByKey[cacheKey];
@@ -76,7 +84,13 @@ export function fromBaseQuery<TError, TParam = void, TData = unknown>(
 					loadingByKey[cacheKey] = true;
 					globalLoading.count++;
 
-					const loadResult = await loadFn(frozenQueryParam);
+					const loadResult = await loadFn(
+						frozenQueryParam,
+						cacheKey,
+						mode,
+						$state.snapshot(dataByKey[cacheKey]) as TData | undefined
+					);
+
 					if (loadResult.success) {
 						dataByKey[cacheKey] = loadResult.data;
 						loadedTimeStampByKey[cacheKey] = +new Date();
@@ -107,26 +121,31 @@ export function fromBaseQuery<TError, TParam = void, TData = unknown>(
 	});
 
 	return {
-		get loading() {
-			return !!loadingByKey[internalState.currentKey];
+		load: (mode?: string) => {
+			queryLoaderByKey[internalState.currentKey]?.(mode);
 		},
-		get data() {
-			return (
-				(dataByKey[internalState.currentKey] as TData | undefined) ??
-				options?.initialData
-			);
-		},
-		get error() {
-			return errorByKey[internalState.currentKey] as TError | undefined;
-		},
-		get loadedTimeStamp() {
-			return loadedTimeStampByKey[internalState.currentKey];
-		},
-		get staleTimeStamp() {
-			return staleTimeStampByKey[internalState.currentKey];
-		},
-		reload: () => {
-			queryLoaderByKey[internalState.currentKey]?.();
+		external: {
+			get loading() {
+				return !!loadingByKey[internalState.currentKey];
+			},
+			get data() {
+				return (
+					(dataByKey[internalState.currentKey] as TData | undefined) ??
+					options?.initialData
+				);
+			},
+			get error() {
+				return errorByKey[internalState.currentKey] as TError | undefined;
+			},
+			get loadedTimeStamp() {
+				return loadedTimeStampByKey[internalState.currentKey];
+			},
+			get staleTimeStamp() {
+				return staleTimeStampByKey[internalState.currentKey];
+			},
+			reload: () => {
+				queryLoaderByKey[internalState.currentKey]?.();
+			}
 		}
 	};
 }

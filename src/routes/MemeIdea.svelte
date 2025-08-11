@@ -30,7 +30,9 @@
 
 	const param = $state({ id: 1 });
 
-	const query = emojiQuery(param);
+	const { loading, error, data, staleTimeStamp, reload } = $derived(
+		emojiQuery(param)
+	);
 </script>
 
 <div class="emojis-container">
@@ -39,33 +41,33 @@
 	</h1>
 
 	<div class="flex">
-		<button onclick={query.reload}>↻</button>
+		<button onclick={reload}>↻</button>
 		<button onclick={() => param.id--}>-</button>
 		<button onclick={() => param.id++}>+</button>
 	</div>
 
-	<div class="emoji" class:loading={query.loading}>
-		{#if query.error}
-			<p>Error: {query.error}</p>
+	<div class="emoji" class:loading>
+		{#if error}
+			<p>Error: {error}</p>
 		{/if}
 
-		{#if query.data}
-			<div class="content">{query.data.emoji}</div>
+		{#if data}
+			<div class="content">{data.emoji}</div>
 			<div>
-				<div>id: {query.data.id}</div>
-				<div>time: {formatHHMMSS(query.data.fetchedAt)}</div>
+				<div>id: {data.id}</div>
+				<div>time: {formatHHMMSS(data.fetchedAt)}</div>
 			</div>
 			<div>
 				staleTime:
-				{#if query.staleTimeStamp}
-					{formatHHMMSS(new Date(query.staleTimeStamp))}
+				{#if staleTimeStamp}
+					{formatHHMMSS(new Date(staleTimeStamp))}
 				{:else}
 					not
 				{/if}
 			</div>
 		{/if}
 
-		{#if query.loading}
+		{#if loading}
 			<div>Loading</div>
 		{/if}
 	</div>

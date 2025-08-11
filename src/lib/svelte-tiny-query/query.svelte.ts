@@ -77,6 +77,8 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 			return await loadFn(queryParam);
 		};
 
-		return fromBaseQuery(key, loadData, queryParam, options);
+		const query = fromBaseQuery(key, loadData, queryParam, options);
+
+		return query.external;
 	};
 }

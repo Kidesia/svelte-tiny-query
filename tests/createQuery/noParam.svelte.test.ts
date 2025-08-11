@@ -298,7 +298,7 @@ describe('Normal Query - No Parameter', () => {
 		});
 
 		[states1.value, states2.value].forEach((states) => {
-			expect(states1.value).toEqual([
+			expect(states).toEqual([
 				// Initial state
 				{
 					data: undefined,

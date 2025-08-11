@@ -4,6 +4,7 @@
 		createSequentialQuery,
 		type SequentialLoadResult
 	} from '../../src/lib/index.ts';
+	import { captureState } from '../testHelpers.ts';
 
 	let {
 		states,
@@ -25,15 +26,16 @@
 
 	const testQuery = createSequentialQuery(key, loadingFn, queryOptions);
 
-	const { query, reload, loadMore } = testQuery();
+	const query = testQuery();
 
 	$effect(() => {
-		states.value = [...untrack(() => states.value), $state.snapshot(query)];
+		const queryValue = captureState(query);
+		states.value = [...untrack(() => states.value), queryValue];
 	});
 </script>
 
-<button onclick={reload}>Reload</button>
-<button onclick={() => loadMore()}>Load More</button>
+<button onclick={query.reload}>Reload</button>
+<button onclick={query.loadMore}>Load More</button>
 
 <div>Loading: {query.loading}</div>
 <div>Error: {query.error}</div>

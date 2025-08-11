@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createSequentialQuery } from '$lib/svelte-tiny-query/sequential.svelte';
+	import { createSequentialQuery } from '$lib/svelte-tiny-query/sequential2.svelte';
 
 	const testQuery = createSequentialQuery(
 		['to-infinity'],
@@ -17,15 +17,21 @@
 		}
 	);
 
-	const { query, loadMore, reload } = testQuery();
+	const query = testQuery();
 </script>
 
 <div>
-	<button onclick={reload}>Reload</button>
-	<button onclick={loadMore} disabled={!query.hasMore}>Load More</button>
+	<button onclick={query.reload}>Reload</button>
+	<button onclick={query.loadMore} disabled={!query.hasMore}>Load More</button>
 
 	<div>Loading: {query.loading}</div>
 	<div>Error: {query.error}</div>
 	<div>Data: {query.data ?? ''}</div>
-	<div>Has More: {query.hasMore ? 'yeah' : 'no'}</div>
+	<div>
+		Has More: {query.hasMore === undefined
+			? '-'
+			: query.hasMore
+				? 'yeah'
+				: 'no'}
+	</div>
 </div>

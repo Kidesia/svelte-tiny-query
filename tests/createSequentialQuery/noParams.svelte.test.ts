@@ -36,6 +36,15 @@ describe('Sequential Query - No Parameter', () => {
 				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
+			// hasMore switches first (TODO: how to handle this?)
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				hasMore: false,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
 			// After loading there is no more data (cursor was undefined)
 			{
 				data: ['payload'],
@@ -148,6 +157,15 @@ describe('Sequential Query - No Parameter', () => {
 				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
+			// hasMore switches first (TODO: how to handle this?)
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				hasMore: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
 			// After loading first page
 			{
 				data: [[0, 1, 2]],
@@ -187,6 +205,18 @@ describe('Sequential Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				hasMore: true,
+				loadedTimeStamp: mockDate.getTime() + 1000,
+				staleTimeStamp: mockDate.getTime() + 1000
+			},
+			// hasMore switches first (TODO: how to handle this?)
+			{
+				data: [
+					[0, 1, 2],
+					[10, 11, 12]
+				],
+				error: undefined,
+				loading: true,
+				hasMore: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
 				staleTimeStamp: mockDate.getTime() + 1000
 			},
@@ -257,6 +287,15 @@ describe('Sequential Query - No Parameter', () => {
 				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
+			// hasMore switches first (TODO: how to handle this?)
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				hasMore: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
 			// After loading first page
 			{
 				data: [[0, 1, 2]],
@@ -288,7 +327,7 @@ describe('Sequential Query - No Parameter', () => {
 		]);
 	});
 
-	test('Reloads after multiple pages loaded', async () => {
+	test('Reloading after multiple pages loaded returns to initial page', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
@@ -301,7 +340,7 @@ describe('Sequential Query - No Parameter', () => {
 				loadingFn: async (_, cursor = 0) => ({
 					success: true,
 					data: [cursor, cursor + 1, cursor + 2],
-					cursor: cursor < 20 ? cursor + 10 : undefined
+					cursor: cursor + 10
 				})
 			}
 		});
@@ -334,6 +373,15 @@ describe('Sequential Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				hasMore: undefined,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
+			// has more switches first (TODO: how to handle this?)
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				hasMore: true,
 				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
@@ -449,6 +497,15 @@ describe('Sequential Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				hasMore: undefined,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
+			// has more switches first (TODO: how to handle this?)
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				hasMore: true,
 				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
