@@ -36,15 +36,6 @@ describe('Sequential Query - No Parameter', () => {
 				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
-			// hasMore switches first (TODO: how to handle this?)
-			{
-				data: undefined,
-				error: undefined,
-				loading: true,
-				hasMore: false,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
 			// After loading there is no more data (cursor was undefined)
 			{
 				data: ['payload'],
@@ -157,15 +148,6 @@ describe('Sequential Query - No Parameter', () => {
 				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
-			// hasMore switches first (TODO: how to handle this?)
-			{
-				data: undefined,
-				error: undefined,
-				loading: true,
-				hasMore: true,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
 			// After loading first page
 			{
 				data: [[0, 1, 2]],
@@ -180,7 +162,7 @@ describe('Sequential Query - No Parameter', () => {
 				data: [[0, 1, 2]],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			},
@@ -204,19 +186,7 @@ describe('Sequential Query - No Parameter', () => {
 				],
 				error: undefined,
 				loading: true,
-				hasMore: true,
-				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
-			},
-			// hasMore switches first (TODO: how to handle this?)
-			{
-				data: [
-					[0, 1, 2],
-					[10, 11, 12]
-				],
-				error: undefined,
-				loading: true,
-				hasMore: false,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime() + 1000,
 				staleTimeStamp: mockDate.getTime() + 1000
 			},
@@ -287,15 +257,6 @@ describe('Sequential Query - No Parameter', () => {
 				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
-			// hasMore switches first (TODO: how to handle this?)
-			{
-				data: undefined,
-				error: undefined,
-				loading: true,
-				hasMore: true,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
 			// After loading first page
 			{
 				data: [[0, 1, 2]],
@@ -310,7 +271,7 @@ describe('Sequential Query - No Parameter', () => {
 				data: [[0, 1, 2]],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			},
@@ -376,15 +337,6 @@ describe('Sequential Query - No Parameter', () => {
 				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
-			// has more switches first (TODO: how to handle this?)
-			{
-				data: undefined,
-				error: undefined,
-				loading: true,
-				hasMore: true,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
 			// After loading first page
 			{
 				data: [[0, 1, 2]],
@@ -399,7 +351,7 @@ describe('Sequential Query - No Parameter', () => {
 				data: [[0, 1, 2]],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			},
@@ -423,7 +375,7 @@ describe('Sequential Query - No Parameter', () => {
 				],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime() + 1000,
 				staleTimeStamp: mockDate.getTime() + 1000
 			},
@@ -500,15 +452,6 @@ describe('Sequential Query - No Parameter', () => {
 				loadedTimeStamp: undefined,
 				staleTimeStamp: undefined
 			},
-			// has more switches first (TODO: how to handle this?)
-			{
-				data: undefined,
-				error: undefined,
-				loading: true,
-				hasMore: true,
-				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
-			},
 			// After loading first page
 			{
 				data: [[0, 1, 2]],
@@ -523,7 +466,7 @@ describe('Sequential Query - No Parameter', () => {
 				data: [[0, 1, 2]],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			},
@@ -547,7 +490,7 @@ describe('Sequential Query - No Parameter', () => {
 				],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime() + 1000,
 				staleTimeStamp: mockDate.getTime() + 1000
 			},

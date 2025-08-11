@@ -28,10 +28,10 @@
 	<div>Error: {query.error}</div>
 	<div>Data: {query.data ?? ''}</div>
 	<div>
-		Has More: {query.hasMore === undefined
-			? '-'
-			: query.hasMore
-				? 'yeah'
-				: 'no'}
+		Has More: {query.hasMore
+			? 'Yes'
+			: query.hasMore === undefined
+				? 'Maybe'
+				: 'No'}
 	</div>
 </div>

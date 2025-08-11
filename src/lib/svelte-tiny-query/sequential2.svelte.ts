@@ -1,4 +1,5 @@
 import { fromBaseQuery, type BaseQueryState } from './baseQuery.svelte.ts';
+import { loadingByKey } from './cache.svelte.ts';
 import { generateKey } from './utils.ts';
 
 // Types
@@ -82,6 +83,7 @@ export function createSequentialQuery<
 			currentData: TData[] | undefined
 		) => {
 			const cursor = cursorByKey[cacheKey] as TCursor | undefined;
+
 			const loadResult = await loadFn(
 				queryParam,
 				mode === 'more' ? cursor : undefined
@@ -114,7 +116,7 @@ export function createSequentialQuery<
 			hasMore: {
 				get() {
 					const cacheKey = generateKey(key, queryParam).join('__');
-					return hasMoreByKey[cacheKey];
+					return loadingByKey[cacheKey] ? undefined : hasMoreByKey[cacheKey];
 				},
 				enumerable: true,
 				configurable: true

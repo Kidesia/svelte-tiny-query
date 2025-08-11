@@ -39,5 +39,11 @@
 
 <div>Loading: {query.loading}</div>
 <div>Error: {query.error}</div>
-<div>Has More: {query.hasMore ? 'Yes' : 'No'}</div>
+<div>
+	Has More: {query.hasMore
+		? 'Yes'
+		: query.hasMore === undefined
+			? 'Maybe'
+			: 'No'}
+</div>
 <div>Data: {query.data ? JSON.stringify(query.data) : ''}</div>
