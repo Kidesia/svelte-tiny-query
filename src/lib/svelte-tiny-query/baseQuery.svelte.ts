@@ -144,7 +144,7 @@ export function fromBaseQuery<TError, TParam = void, TData = unknown>(
 				return staleTimeStampByKey[internalState.currentKey];
 			},
 			reload: () => {
-				queryLoaderByKey[internalState.currentKey]?.();
+				queryLoaderByKey[internalState.currentKey]?.('reload');
 			}
 		}
 	};
