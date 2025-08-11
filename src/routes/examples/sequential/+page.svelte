@@ -1,6 +1,9 @@
 <script lang="ts">
+	import QueryContainer from '../../QueryContainer.svelte';
 	import SequentialCard from './SequentialCard.svelte';
 </script>
 
-<SequentialCard />
-<SequentialCard />
+<QueryContainer>
+	<SequentialCard />
+	<SequentialCard />
+</QueryContainer>

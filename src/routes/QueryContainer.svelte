@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { invalidateQueries, globalLoading } from '$lib/index.js';
+	import { invalidateQueries, globalLoading, queryInfos } from '$lib/index.js';
 
 	const { children } = $props();
 
-	let queryKey = $state('');
+	let queryKey = $state('[]');
 
 	function invalidate() {
 		try {
@@ -20,7 +20,20 @@
 
 	<footer>
 		<div>
-			<input type="text" placeholder="invalidate" bind:value={queryKey} />
+			<input
+				type="text"
+				placeholder="invalidate"
+				list="query-keys"
+				bind:value={queryKey}
+			/>
+
+			<datalist id="query-keys">
+				<option value="[]"></option>
+				{#each queryInfos.cachedQueries as key (key)}
+					<option value={JSON.stringify(key)}></option>
+				{/each}
+			</datalist>
+
 			<button onclick={invalidate}>invalidate</button>
 		</div>
 
