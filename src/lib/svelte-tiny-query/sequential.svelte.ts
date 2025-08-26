@@ -1,8 +1,41 @@
-import { fromBaseQuery, type BaseQueryState } from './baseQuery.svelte.ts';
-import { loadingByKey } from './cache.svelte.ts';
+import { untrack } from 'svelte';
+
 import { generateKey } from './utils.ts';
+import {
+	queryLoaderByKey,
+	loadingByKey,
+	dataByKey,
+	errorByKey,
+	loadedTimeStampByKey,
+	staleTimeStampByKey
+} from './cache.svelte.ts';
+import { registerActiveQuery, withLoading } from './query-helpers.svelte.ts';
 
 // Types
+
+/**
+ * Represents the current state of a sequential query.
+ * @template TData The type of the data returned by the query.
+ * @template TError The type of the error that can occur during the query.
+ */
+export type SequentialQueryState<TData, TError> = {
+	/** Indicates if the query is currently loading. */
+	loading: boolean;
+	/** The data returned by the query. This can be `undefined` if `initialData` was not provided and the query hasn't loaded yet. */
+	data: TData;
+	/** Any error that occurred during the query, or undefined if no error. */
+	error: TError | undefined;
+	/** Indicates if there is more data to load (undefined while loading). */
+	hasMore: boolean | undefined;
+	/** The timestamp when the data was fetched, or `undefined` if the data hasn't been loaded yet. */
+	loadedTimeStamp: number | undefined;
+	/** The timestamp when the data will be considered stale, or `undefined` if no staleTime is set or data hasn't loaded. */
+	staleTimeStamp: number | undefined;
+	/** Function to load the next slice of data (if there is more data) */
+	loadMore: () => void;
+	/** Reload function to manually trigger the query again. */
+	reload: () => void;
+};
 
 type SequentialLoadSuccess<TData, TCursor> = {
 	success: true;
@@ -14,11 +47,6 @@ type LoadFailure<TError> = { success: false; error: TError };
 export type SequentialLoadResult<TData, TCursor, TError> =
 	| SequentialLoadSuccess<TData, TCursor>
 	| LoadFailure<TError>;
-
-type SequentialQueryState<TData, TError> = BaseQueryState<TData, TError> & {
-	hasMore: boolean | undefined;
-	loadMore: () => void;
-};
 
 // States
 
@@ -60,9 +88,9 @@ export function createSequentialQuery<
 ): (queryParam: TParam) => SequentialQueryState<TData[] | undefined, TError>;
 
 export function createSequentialQuery<
+	TData,
 	TError,
 	TParam = void,
-	TData = unknown,
 	TCursor = unknown
 >(
 	key: string[] | ((queryParam: TParam) => string[]),
@@ -74,13 +102,14 @@ export function createSequentialQuery<
 		initialData?: TData[];
 		staleTime?: number;
 	}
-): (queryParam: TParam) => SequentialQueryState<TData[] | undefined, TError> {
-	return (queryParam: TParam) => {
+): (param: TParam) => SequentialQueryState<TData[] | undefined, TError> {
+	return (param: TParam) => {
+		// Helpers
 		const loadData = async (
 			queryParam: TParam,
 			cacheKey: string,
 			mode: string,
-			currentData: TData[] | undefined
+			currentData: TData[] | undefined = undefined
 		) => {
 			const cursor = cursorByKey[cacheKey] as TCursor | undefined;
 
@@ -108,11 +137,8 @@ export function createSequentialQuery<
 			};
 		};
 
-		const reloadAllPages = async (
-			queryParam: TParam,
-			cacheKey: string,
-			currentData: TData[] | undefined
-		) => {
+		const reloadAllPages = async (queryParam: TParam, cacheKey: string) => {
+			const currentData = dataByKey[cacheKey] as TData[] | undefined;
 			const numPages = currentData?.length ?? 1;
 			let newData = [] as TData[];
 
@@ -133,44 +159,89 @@ export function createSequentialQuery<
 			};
 		};
 
-		const dispatchLoadData = async (
-			queryParam: TParam,
-			cacheKey: string,
-			mode: string,
-			currentData: TData[] | undefined
-		) => {
-			if (mode === 'load') {
-				// When the query is mounted or invalidated
-				return reloadAllPages(queryParam, cacheKey, currentData);
-			} else {
-				// When loadMore is called
-				return loadData(queryParam, cacheKey, mode, currentData);
-			}
-		};
-
-		const baseQuery = fromBaseQuery(key, dispatchLoadData, queryParam, options);
-
-		const sequentialQuery = Object.create(baseQuery.external);
-
-		Object.defineProperties(sequentialQuery, {
-			hasMore: {
-				get() {
-					const cacheKey = generateKey(key, queryParam).join('__');
-					return loadingByKey[cacheKey] ? undefined : hasMoreByKey[cacheKey];
-				},
-				enumerable: true,
-				configurable: true
-			},
-			loadMore: {
-				value: function () {
-					baseQuery.load('more');
-				},
-				writable: true,
-				enumerable: true,
-				configurable: true
-			}
+		// State
+		const internalState = $state({
+			currentKey: generateKey(key, param).join('__')
 		});
 
-		return sequentialQuery;
+		registerActiveQuery(internalState.currentKey);
+
+		$effect(() => {
+			// Reset state and run the query loader when the queryParam changes
+			const cacheKey = generateKey(key, param).join('__');
+
+			untrack(() => {
+				// Set the new cache key in the internal state
+				internalState.currentKey = cacheKey;
+
+				// Create and store the query loader if it doesn't exist
+				if (!queryLoaderByKey[cacheKey]) {
+					const frozenQueryParam = $state.snapshot(param) as TParam;
+
+					const queryLoaderWithParam = async (mode: string) => {
+						const cacheKey = generateKey(key, param).join('__');
+
+						withLoading(
+							cacheKey,
+							() => {
+								switch (mode) {
+									case 'more':
+										return loadData(
+											frozenQueryParam,
+											cacheKey,
+											mode,
+											dataByKey[cacheKey] as TData[] | undefined
+										);
+									case 'reload':
+										return loadData(frozenQueryParam, cacheKey, mode);
+									default:
+										return reloadAllPages(frozenQueryParam, cacheKey);
+								}
+							},
+							options?.staleTime ?? Infinity,
+							mode !== undefined
+						);
+					};
+
+					//@ts-expect-error we know that this can have a param
+					queryLoaderByKey[cacheKey] = queryLoaderWithParam;
+				}
+
+				// Run the query
+				queryLoaderByKey[cacheKey]();
+			});
+		});
+
+		return {
+			get loading() {
+				return !!loadingByKey[internalState.currentKey];
+			},
+			get data() {
+				return (
+					(dataByKey[internalState.currentKey] as TData[] | undefined) ??
+					options?.initialData
+				);
+			},
+			get hasMore() {
+				return loadingByKey[internalState.currentKey]
+					? undefined
+					: hasMoreByKey[internalState.currentKey];
+			},
+			get error() {
+				return errorByKey[internalState.currentKey] as TError | undefined;
+			},
+			get loadedTimeStamp() {
+				return loadedTimeStampByKey[internalState.currentKey];
+			},
+			get staleTimeStamp() {
+				return staleTimeStampByKey[internalState.currentKey];
+			},
+			loadMore: () => {
+				queryLoaderByKey[internalState.currentKey]?.('more');
+			},
+			reload: () => {
+				queryLoaderByKey[internalState.currentKey]?.('reload');
+			}
+		};
 	};
 }
