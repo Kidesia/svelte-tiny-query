@@ -44,7 +44,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			}
 		]);
 	});
@@ -156,7 +156,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			},
 			// Loading more data
 			{
@@ -165,7 +165,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: true,
 				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			},
 			// After loading second page
 			{
@@ -177,7 +177,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: Infinity
 			},
 			// Loading more data again
 			{
@@ -189,7 +189,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: true,
 				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: Infinity
 			},
 			// After loading third page
 			{
@@ -202,7 +202,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: false,
 				loadedTimeStamp: mockDate.getTime() + 2000,
-				staleTimeStamp: mockDate.getTime() + 2000
+				staleTimeStamp: Infinity
 			}
 			// No additional state change after clicking "Load More" again
 		]);
@@ -265,7 +265,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			},
 			// Loading more data
 			{
@@ -274,7 +274,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: true,
 				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			},
 			// After error in load more
 			{
@@ -283,7 +283,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			}
 			// No additional state change after clicking "Load More" again
 		]);
@@ -345,7 +345,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity // mockDate.getTime()
 			},
 			// Loading more data
 			{
@@ -354,7 +354,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: true,
 				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity // mockDate.getTime()
 			},
 			// After loading second page
 			{
@@ -366,7 +366,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: Infinity // mockDate.getTime() + 1000
 			},
 			// Reloading data
 			{
@@ -378,7 +378,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: true,
 				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: Infinity // mockDate.getTime() + 1000
 			},
 			// After reloading data
 			{
@@ -387,7 +387,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime() + 2000,
-				staleTimeStamp: mockDate.getTime() + 2000
+				staleTimeStamp: Infinity // mockDate.getTime() + 2000
 			}
 		]);
 	});
@@ -460,7 +460,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			},
 			// Loading more data
 			{
@@ -469,7 +469,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: true,
 				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			},
 			// After loading second page
 			{
@@ -481,7 +481,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: Infinity
 			},
 			// Reloading data
 			{
@@ -493,7 +493,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: true,
 				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: Infinity
 			},
 			// After error in reload
 			{
@@ -505,7 +505,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: Infinity
 			}
 		]);
 	});
@@ -540,7 +540,10 @@ describe('Sequential Query - No Parameter', () => {
 			props: {
 				states: states,
 				key: ['sequential-invalidate-test'],
-				loadingFn: mockLoadingFn
+				loadingFn: mockLoadingFn,
+				queryOptions: {
+					staleTime: 0
+				}
 			}
 		});
 

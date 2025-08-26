@@ -27,13 +27,14 @@ export function registerActiveQuery(key: string) {
 export async function withLoading<TData, TError>(
 	key: string,
 	loadFn: () => Promise<LoadResult<TData, TError>>,
-	staleTime = 0
+	staleTime = 0,
+	force = false
 ) {
 	// Check if the query is already loading or still has fresh data
 	const alreadyLoading = loadingByKey[key];
 	const alreadyLoaded = !!loadedTimeStampByKey[key];
 	const staleData = staleTimeStampByKey[key] <= +new Date();
-	if (alreadyLoading || (alreadyLoaded && !staleData)) {
+	if (!force && (alreadyLoading || (alreadyLoaded && !staleData))) {
 		return;
 	}
 
