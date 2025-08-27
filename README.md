@@ -74,11 +74,9 @@ Svelte Tiny Query only exports 2 functions (`createQuery` and `invalidateQueries
   options?: { initialData?: T, staleTime?: number }
 ) =>
   (param: P) => {
-    query: {
-      data: T | undefined,
-      error: E | undefined,
-      loading: boolean
-    },
+    data: T | undefined,
+    error: E | undefined,
+    loading: boolean,
     reload: () => void
   }
 ```
@@ -133,11 +131,9 @@ options?: {
 
 ```typescript
 (param: P) => {
-  query: {
-    data: T | undefined,
-    error: E | undefined,
-    loading: boolean
-  },
+  data: T | undefined,
+  error: E | undefined,
+  loading: boolean,
   reload: () => void
 }
 ```
