@@ -1,6 +1,6 @@
 import { untrack } from 'svelte';
 
-import { generateKey } from './utils.ts';
+import { generateKey } from './utils.js';
 import {
 	queryLoaderByKey,
 	loadingByKey,
@@ -8,8 +8,8 @@ import {
 	errorByKey,
 	loadedTimeStampByKey,
 	staleTimeStampByKey
-} from './cache.svelte.ts';
-import { registerActiveQuery, withLoading } from './query-helpers.svelte.ts';
+} from './cache.svelte';
+import { registerActiveQuery, withLoading } from './queryHelpers.svelte';
 
 // Types
 

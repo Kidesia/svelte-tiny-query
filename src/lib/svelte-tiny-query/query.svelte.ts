@@ -10,7 +10,7 @@ import {
 	loadedTimeStampByKey,
 	staleTimeStampByKey
 } from './cache.svelte';
-import { registerActiveQuery, withLoading } from './query-helpers.svelte.ts';
+import { registerActiveQuery, withLoading } from './queryHelpers.svelte';
 
 /**
  * Represents the current state of a query.
