@@ -8,7 +8,7 @@ import {
 	globalLoading,
 	dataByKey
 } from './cache.svelte';
-import type { LoadResult } from './loadHelpers.ts';
+import type { LoadResult } from './loadHelpers.js';
 
 export function registerActiveQuery(key: string) {
 	$effect(() => {
