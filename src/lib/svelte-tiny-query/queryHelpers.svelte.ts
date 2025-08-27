@@ -5,12 +5,11 @@ import {
 	errorByKey,
 	loadedTimeStampByKey,
 	staleTimeStampByKey,
-	globalLoading,
 	dataByKey
 } from './cache.svelte';
 import type { LoadResult } from './loadHelpers.js';
 
-export function registerActiveQuery(key: string) {
+export function trackActiveQuery(key: string) {
 	$effect(() => {
 		untrack(() => {
 			// Increment the active query count for this cache key
@@ -41,7 +40,6 @@ export async function withLoading<TData, TError>(
 	// Reset error and mark as loading
 	errorByKey[key] = undefined;
 	loadingByKey[key] = true;
-	globalLoading.count++;
 
 	// Run the query function and store results
 	const loadResult = await loadFn();
@@ -55,5 +53,4 @@ export async function withLoading<TData, TError>(
 
 	// Mark the query as no longer loading
 	loadingByKey[key] = false;
-	globalLoading.count--;
 }

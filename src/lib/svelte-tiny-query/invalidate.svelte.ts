@@ -4,7 +4,9 @@ import {
 	dataByKey,
 	errorByKey,
 	staleTimeStampByKey,
-	activeQueryCounts
+	activeQueryCounts,
+	hasMoreByKey,
+	cursorByKey
 } from './cache.svelte';
 
 /**
@@ -36,9 +38,11 @@ export function invalidateQueries(
 				options?.exact ? key === cacheKey : key.startsWith(cacheKey)
 			)
 			.forEach((key) => {
-				loadingByKey[key] = false;
-				dataByKey[key] = undefined;
-				errorByKey[key] = undefined;
+				delete loadingByKey[key];
+				delete dataByKey[key];
+				delete errorByKey[key];
+				delete hasMoreByKey[key];
+				delete cursorByKey[key];
 			});
 	}
 
