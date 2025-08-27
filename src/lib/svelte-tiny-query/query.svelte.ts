@@ -1,34 +1,35 @@
 import { untrack } from 'svelte';
 
-import { generateKey } from './utils.js';
 import type { LoadResult } from './loadHelpers.js';
+import { generateKey } from './utils.js';
 import {
 	queryLoaderByKey,
 	loadingByKey,
 	dataByKey,
 	errorByKey,
 	loadedTimeStampByKey,
-	staleTimeStampByKey,
-	activeQueryCounts,
-	globalLoading
+	staleTimeStampByKey
 } from './cache.svelte';
+import { registerActiveQuery, withLoading } from './queryHelpers.svelte';
 
 /**
  * Represents the current state of a query.
  * @template TData The type of the data returned by the query.
  * @template TError The type of the error that can occur during the query.
  */
-type QueryState<TData, TError> = {
+export type QueryState<TData, TError> = {
 	/** Indicates if the query is currently loading. */
 	loading: boolean;
-	/** Any error that occurred during the query, or undefined if no error. */
-	error: TError | undefined;
 	/** The data returned by the query. This can be `undefined` if `initialData` was not provided and the query hasn't loaded yet. */
 	data: TData;
+	/** Any error that occurred during the query, or undefined if no error. */
+	error: TError | undefined;
 	/** The timestamp when the data was fetched, or `undefined` if the data hasn't been loaded yet. */
 	loadedTimeStamp: number | undefined;
 	/** The timestamp when the data will be considered stale, or `undefined` if no staleTime is set or data hasn't loaded. */
 	staleTimeStamp: number | undefined;
+	/** Reload function to manually trigger the query again. */
+	reload: () => void;
 };
 
 /**
@@ -62,12 +63,7 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 		 */
 		staleTime?: number;
 	}
-): (queryParam: TParam) => {
-	/** The current state of the query, including loading status, data, and error. */
-	query: QueryState<TData, TError>;
-	/** A function to manually reload the query data. */
-	reload: () => void;
-};
+): (queryParam: TParam) => QueryState<TData, TError>;
 
 /**
  * Creates a reactive query function for fetching and managing data in Svelte components.
@@ -97,104 +93,73 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 		 */
 		staleTime?: number;
 	}
-): (queryParam: TParam) => {
-	/** The current state of the query, including loading status, data, and error. */
-	query: QueryState<TData | undefined, TError>;
-	/** A function to manually reload the query data. */
-	reload: () => void;
-};
+): (queryParam: TParam) => QueryState<TData | undefined, TError>;
 
-export function createQuery<TError, TParam = void, TData = unknown>(
+export function createQuery<TData, TError, TParam = void>(
 	key: string[] | ((queryParam: TParam) => string[]),
 	loadFn: (queryParam: TParam) => Promise<LoadResult<TData, TError>>,
 	options?: {
 		initialData?: TData;
 		staleTime?: number;
 	}
-): (queryParam: TParam) => {
-	query: QueryState<TData | undefined, TError>;
-	reload: () => void;
-} {
-	const loadData = async (queryParam: TParam) => {
-		const cacheKey = generateKey(key, queryParam).join('__');
-
-		errorByKey[cacheKey] = undefined;
-		loadingByKey[cacheKey] = true;
-		globalLoading.count++;
-
-		const loadResult = await loadFn(queryParam);
-		if (loadResult.success) {
-			dataByKey[cacheKey] = loadResult.data;
-			loadedTimeStampByKey[cacheKey] = +new Date();
-			staleTimeStampByKey[cacheKey] = +new Date() + (options?.staleTime ?? 0);
-		} else {
-			errorByKey[cacheKey] = loadResult.error;
-		}
-
-		loadingByKey[cacheKey] = false;
-		globalLoading.count--;
-	};
-
-	return (queryParam: TParam) => {
+): (param: TParam) => QueryState<TData | undefined, TError> {
+	return (param: TParam) => {
 		const internalState = $state({
-			currentKey: generateKey(key, queryParam).join('__')
+			currentKey: generateKey(key, param).join('__')
 		});
+
+		registerActiveQuery(internalState.currentKey);
 
 		$effect(() => {
 			// Reset state and run the query loader when the queryParam changes
-			const cacheKey = generateKey(key, queryParam).join('__');
+			const cacheKey = generateKey(key, param).join('__');
 
 			untrack(() => {
-				const frozenQueryParam = $state.snapshot(queryParam) as TParam;
-				const queryLoaderWithParam = () => {
-					loadData(frozenQueryParam);
-				};
-
-				activeQueryCounts[cacheKey] = (activeQueryCounts[cacheKey] ?? 0) + 1;
-				queryLoaderByKey[cacheKey] = queryLoaderWithParam;
+				// Set the new cache key in the internal state
 				internalState.currentKey = cacheKey;
 
-				const alreadyLoading = loadingByKey[cacheKey];
-				const notFetchedYet = !staleTimeStampByKey[cacheKey];
-				const staleData = staleTimeStampByKey[cacheKey] <= +new Date();
+				// Create and store the query loader if it doesn't exist
+				if (!queryLoaderByKey[cacheKey]) {
+					const frozenQueryParam = $state.snapshot(param) as TParam;
 
-				if (!alreadyLoading && (notFetchedYet || staleData)) {
-					queryLoaderWithParam();
+					const queryLoaderWithParam = async () => {
+						const cacheKey = generateKey(key, param).join('__');
+						withLoading(
+							cacheKey,
+							() => loadFn(frozenQueryParam),
+							options?.staleTime
+						);
+					};
+
+					queryLoaderByKey[cacheKey] = queryLoaderWithParam;
 				}
-			});
 
-			return () => {
-				// Decrement the active query count when the query is destroyed
-				activeQueryCounts[cacheKey] = Math.max(
-					(activeQueryCounts[cacheKey] ?? 0) - 1,
-					0
-				);
-			};
+				// Run the query
+				queryLoaderByKey[cacheKey]();
+			});
 		});
 
 		return {
-			query: {
-				get loading() {
-					return !!loadingByKey[internalState.currentKey];
-				},
-				get data() {
-					return (
-						(dataByKey[internalState.currentKey] as TData | undefined) ??
-						options?.initialData
-					);
-				},
-				get error() {
-					return errorByKey[internalState.currentKey] as TError | undefined;
-				},
-				get loadedTimeStamp() {
-					return loadedTimeStampByKey[internalState.currentKey];
-				},
-				get staleTimeStamp() {
-					return staleTimeStampByKey[internalState.currentKey];
-				}
+			get loading() {
+				return !!loadingByKey[internalState.currentKey];
+			},
+			get data() {
+				return (
+					(dataByKey[internalState.currentKey] as TData | undefined) ??
+					options?.initialData
+				);
+			},
+			get error() {
+				return errorByKey[internalState.currentKey] as TError | undefined;
+			},
+			get loadedTimeStamp() {
+				return loadedTimeStampByKey[internalState.currentKey];
+			},
+			get staleTimeStamp() {
+				return staleTimeStampByKey[internalState.currentKey];
 			},
 			reload: () => {
-				queryLoaderByKey[internalState.currentKey]?.();
+				queryLoaderByKey[internalState.currentKey]?.('reload');
 			}
 		};
 	};

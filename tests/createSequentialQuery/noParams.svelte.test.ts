@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
 import NoParam from './NoParam.svelte';
+import { invalidateQueries } from '$lib/index.ts';
 
 describe('Sequential Query - No Parameter', () => {
 	test('Loads first page', async () => {
@@ -43,7 +44,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			}
 		]);
 	});
@@ -155,16 +156,16 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			},
 			// Loading more data
 			{
 				data: [[0, 1, 2]],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			},
 			// After loading second page
 			{
@@ -176,7 +177,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: Infinity
 			},
 			// Loading more data again
 			{
@@ -186,9 +187,9 @@ describe('Sequential Query - No Parameter', () => {
 				],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: Infinity
 			},
 			// After loading third page
 			{
@@ -201,7 +202,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: false,
 				loadedTimeStamp: mockDate.getTime() + 2000,
-				staleTimeStamp: mockDate.getTime() + 2000
+				staleTimeStamp: Infinity
 			}
 			// No additional state change after clicking "Load More" again
 		]);
@@ -264,16 +265,16 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			},
 			// Loading more data
 			{
 				data: [[0, 1, 2]],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			},
 			// After error in load more
 			{
@@ -282,13 +283,13 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity
 			}
 			// No additional state change after clicking "Load More" again
 		]);
 	});
 
-	test('Reloads after multiple pages loaded', async () => {
+	test('Reloading after multiple pages loaded returns to initial page', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
 		vi.setSystemTime(mockDate);
@@ -301,7 +302,7 @@ describe('Sequential Query - No Parameter', () => {
 				loadingFn: async (_, cursor = 0) => ({
 					success: true,
 					data: [cursor, cursor + 1, cursor + 2],
-					cursor: cursor < 20 ? cursor + 10 : undefined
+					cursor: cursor + 10
 				})
 			}
 		});
@@ -344,16 +345,16 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity // mockDate.getTime()
 			},
 			// Loading more data
 			{
 				data: [[0, 1, 2]],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: Infinity // mockDate.getTime()
 			},
 			// After loading second page
 			{
@@ -365,9 +366,9 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: Infinity // mockDate.getTime() + 1000
 			},
-			// Reloading data (TODO: should this reset the data by default?)
+			// Reloading data
 			{
 				data: [
 					[0, 1, 2],
@@ -375,9 +376,9 @@ describe('Sequential Query - No Parameter', () => {
 				],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: Infinity // mockDate.getTime() + 1000
 			},
 			// After reloading data
 			{
@@ -386,7 +387,7 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime() + 2000,
-				staleTimeStamp: mockDate.getTime() + 2000
+				staleTimeStamp: Infinity // mockDate.getTime() + 2000
 			}
 		]);
 	});
@@ -459,6 +460,142 @@ describe('Sequential Query - No Parameter', () => {
 				loading: false,
 				hasMore: true,
 				loadedTimeStamp: mockDate.getTime(),
+				staleTimeStamp: Infinity
+			},
+			// Loading more data
+			{
+				data: [[0, 1, 2]],
+				error: undefined,
+				loading: true,
+				hasMore: undefined,
+				loadedTimeStamp: mockDate.getTime(),
+				staleTimeStamp: Infinity
+			},
+			// After loading second page
+			{
+				data: [
+					[0, 1, 2],
+					[10, 11, 12]
+				],
+				error: undefined,
+				loading: false,
+				hasMore: true,
+				loadedTimeStamp: mockDate.getTime() + 1000,
+				staleTimeStamp: Infinity
+			},
+			// Reloading data
+			{
+				data: [
+					[0, 1, 2],
+					[10, 11, 12]
+				],
+				error: undefined,
+				loading: true,
+				hasMore: undefined,
+				loadedTimeStamp: mockDate.getTime() + 1000,
+				staleTimeStamp: Infinity
+			},
+			// After error in reload
+			{
+				data: [
+					[0, 1, 2],
+					[10, 11, 12]
+				],
+				error: 'Error reloading data',
+				loading: false,
+				hasMore: true,
+				loadedTimeStamp: mockDate.getTime() + 1000,
+				staleTimeStamp: Infinity
+			}
+		]);
+	});
+
+	test('Reloads data from all pages when invalidated', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		let i = $state(0);
+		const states = $state({ value: [] });
+		const mockLoadingFn = vi.fn(async (_, cursor = 0) => {
+			i = i + 1;
+			if (i <= 3) {
+				// 3 "normal" requests
+				return {
+					success: true as const,
+					data: [cursor, cursor + 1, cursor + 2],
+					cursor: cursor + 10
+				};
+			} else {
+				// 3 "invalidated" requests
+				return {
+					success: true as const,
+					data: [cursor + 3, cursor + 4, cursor + 5],
+					cursor: cursor + 10
+				};
+			}
+		});
+
+		const rendered = render(NoParam, {
+			props: {
+				states: states,
+				key: ['sequential-invalidate-test'],
+				loadingFn: mockLoadingFn,
+				queryOptions: {
+					staleTime: 0
+				}
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[0,1,2]]')).toBeInTheDocument();
+			expect(rendered.queryByText('Has More: Yes')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Load More')?.click();
+		await waitFor(() => {
+			expect(
+				rendered.queryByText('Data: [[0,1,2],[10,11,12]]')
+			).toBeInTheDocument();
+			expect(rendered.queryByText('Has More: Yes')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Load More')?.click();
+		await waitFor(() => {
+			expect(
+				rendered.queryByText('Data: [[0,1,2],[10,11,12],[20,21,22]]')
+			).toBeInTheDocument();
+			expect(rendered.queryByText('Has More: Yes')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		invalidateQueries(['sequential-invalidate-test']);
+		await waitFor(() => {
+			expect(rendered.queryByText('Loading: true')).toBeInTheDocument();
+		});
+		await waitFor(() => {
+			expect(rendered.queryByText('Loading: false')).toBeInTheDocument();
+		});
+
+		expect(states.value).toEqual([
+			// Initial state
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				hasMore: undefined,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
+			// After loading first page
+			{
+				data: [[0, 1, 2]],
+				error: undefined,
+				loading: false,
+				hasMore: true,
+				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			},
 			// Loading more data
@@ -466,7 +603,7 @@ describe('Sequential Query - No Parameter', () => {
 				data: [[0, 1, 2]],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime(),
 				staleTimeStamp: mockDate.getTime()
 			},
@@ -482,7 +619,7 @@ describe('Sequential Query - No Parameter', () => {
 				loadedTimeStamp: mockDate.getTime() + 1000,
 				staleTimeStamp: mockDate.getTime() + 1000
 			},
-			// Reloading data
+			// Loading more data
 			{
 				data: [
 					[0, 1, 2],
@@ -490,21 +627,48 @@ describe('Sequential Query - No Parameter', () => {
 				],
 				error: undefined,
 				loading: true,
-				hasMore: true,
+				hasMore: undefined,
 				loadedTimeStamp: mockDate.getTime() + 1000,
 				staleTimeStamp: mockDate.getTime() + 1000
 			},
-			// After error in reload
+			// After loading second page
 			{
 				data: [
 					[0, 1, 2],
-					[10, 11, 12]
+					[10, 11, 12],
+					[20, 21, 22]
 				],
-				error: 'Error reloading data',
+				error: undefined,
 				loading: false,
 				hasMore: true,
-				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				loadedTimeStamp: mockDate.getTime() + 2000,
+				staleTimeStamp: mockDate.getTime() + 2000
+			},
+			// Invalidating data (at +3000 time)
+			{
+				data: [
+					[0, 1, 2],
+					[10, 11, 12],
+					[20, 21, 22]
+				],
+				error: undefined,
+				loading: true,
+				hasMore: undefined,
+				loadedTimeStamp: mockDate.getTime() + 2000,
+				staleTimeStamp: mockDate.getTime() + 2999
+			},
+			// After reloading data from all pages
+			{
+				data: [
+					[3, 4, 5],
+					[13, 14, 15],
+					[23, 24, 25]
+				],
+				error: undefined,
+				loading: false,
+				hasMore: true,
+				loadedTimeStamp: mockDate.getTime() + 3000,
+				staleTimeStamp: mockDate.getTime() + 3000
 			}
 		]);
 	});

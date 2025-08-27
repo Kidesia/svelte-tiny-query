@@ -31,7 +31,7 @@
 		}
 	);
 
-	const { query } = emojiQuery();
+	const query = emojiQuery();
 </script>
 
 <div class="emojis-container">

@@ -29,22 +29,27 @@ export function invalidateQueries(
 		}
 	});
 
+	if (options?.force) {
+		// Reset the cache data of the matching queries if forced
+		Object.keys(dataByKey)
+			.filter((key) =>
+				options?.exact ? key === cacheKey : key.startsWith(cacheKey)
+			)
+			.forEach((key) => {
+				loadingByKey[key] = false;
+				dataByKey[key] = undefined;
+				errorByKey[key] = undefined;
+			});
+	}
+
 	// Reload the matching currently active queries right away
-	const queriesToInvalidate = Object.entries(activeQueryCounts).filter(
-		([key, usageCount]) =>
-			usageCount > 0 &&
-			(options?.exact ? key === cacheKey : key.startsWith(cacheKey))
-	);
-
-	// Reset the cache data of the matching queries if forced
-	queriesToInvalidate.forEach(([key]) => {
-		if (options?.force) {
-			loadingByKey[key] = false;
-			dataByKey[key] = undefined;
-			errorByKey[key] = undefined;
-		}
-
-		// TODO: does that work for sequential queries?
-		queryLoaderByKey[key]?.();
-	});
+	Object.entries(activeQueryCounts)
+		.filter(
+			([key, usageCount]) =>
+				usageCount > 0 &&
+				(options?.exact ? key === cacheKey : key.startsWith(cacheKey))
+		)
+		.forEach(([key]) => {
+			queryLoaderByKey[key]?.();
+		});
 }
