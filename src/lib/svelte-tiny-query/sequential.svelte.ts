@@ -11,7 +11,7 @@ import {
 	cursorByKey,
 	hasMoreByKey
 } from './cache.svelte';
-import { trackActiveQuery, withLoading } from './queryHelpers.svelte';
+import { trackActiveQueriesCount, withLoading } from './queryHelpers.svelte';
 
 // Types
 
@@ -163,7 +163,7 @@ export function createSequentialQuery<
 			currentKey: generateKey(key, param).join('__')
 		});
 
-		trackActiveQuery(internalState.currentKey);
+		trackActiveQueriesCount(internalState.currentKey);
 
 		$effect(() => {
 			// Reset state and run the query loader when the queryParam changes

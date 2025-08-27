@@ -9,7 +9,7 @@ import {
 } from './cache.svelte';
 import type { LoadResult } from './loadHelpers.js';
 
-export function trackActiveQuery(key: string) {
+export function trackActiveQueriesCount(key: string) {
 	$effect(() => {
 		untrack(() => {
 			// Increment the active query count for this cache key

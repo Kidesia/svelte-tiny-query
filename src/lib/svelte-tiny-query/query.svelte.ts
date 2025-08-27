@@ -2,7 +2,7 @@ import { untrack } from 'svelte';
 
 import type { LoadResult } from './loadHelpers.js';
 import { generateKey } from './utils.js';
-import { trackActiveQuery, withLoading } from './queryHelpers.svelte';
+import { trackActiveQueriesCount, withLoading } from './queryHelpers.svelte';
 import {
 	queryLoaderByKey,
 	loadingByKey,
@@ -109,7 +109,7 @@ export function createQuery<TData, TError, TParam = void>(
 		});
 
 		// Register the active query (and unregister later)
-		trackActiveQuery(internalState.currentKey);
+		trackActiveQueriesCount(internalState.currentKey);
 
 		$effect(() => {
 			// Reset state and run the query loader when key or queryParam changes
@@ -131,11 +131,12 @@ export function createQuery<TData, TError, TParam = void>(
 					};
 				}
 
-				// Run the query
+				// Run the query loader
 				queryLoaderByKey[cacheKey]();
 			});
 		});
 
+		// Return reactive query state
 		return {
 			get loading() {
 				return !!loadingByKey[internalState.currentKey];
