@@ -4,7 +4,9 @@ import {
 	dataByKey,
 	errorByKey,
 	staleTimeStampByKey,
-	activeQueryCounts
+	activeQueryCounts,
+	hasMoreByKey,
+	cursorByKey
 } from './cache.svelte';
 
 /**
@@ -29,27 +31,26 @@ export function invalidateQueries(
 		}
 	});
 
+	// Reset the cache data of the matching queries if forced
 	if (options?.force) {
-		// Reset the cache data of the matching queries if forced
-		Object.keys(dataByKey)
-			.filter((key) =>
-				options?.exact ? key === cacheKey : key.startsWith(cacheKey)
-			)
-			.forEach((key) => {
-				loadingByKey[key] = false;
-				dataByKey[key] = undefined;
-				errorByKey[key] = undefined;
-			});
+		Object.keys(dataByKey).forEach((key) => {
+			if (options?.exact ? key === cacheKey : key.startsWith(cacheKey)) {
+				delete loadingByKey[key];
+				delete dataByKey[key];
+				delete errorByKey[key];
+				delete hasMoreByKey[key];
+				delete cursorByKey[key];
+			}
+		});
 	}
 
-	// Reload the matching currently active queries right away
-	Object.entries(activeQueryCounts)
-		.filter(
-			([key, usageCount]) =>
-				usageCount > 0 &&
-				(options?.exact ? key === cacheKey : key.startsWith(cacheKey))
-		)
-		.forEach(([key]) => {
+	// Reload the (matching) active queries right away
+	Object.entries(activeQueryCounts).forEach(([key, usageCount]) => {
+		if (
+			usageCount > 0 &&
+			(options?.exact ? key === cacheKey : key.startsWith(cacheKey))
+		) {
 			queryLoaderByKey[key]?.();
-		});
+		}
+	});
 }

@@ -16,31 +16,44 @@ In your **Svelte 5** project, install the library.
 
     npm install svelte-tiny-query --save
 
-And use it l.
+And use it in your components.
 
 ```svelte
 <script>
   import { createQuery } from 'svelte-tiny-query';
 
-  const memeIdeaQuery = createQuery(['meme-ideas'], async ({ id }) => {
-    try {
-      const memeIdea = await fetchDataSomehow(id);
-      return { success: true, data: memeIdea };
-    } catch (e) {
-      return { success: false, error: 'Oopsie!' };
+  // Create a query that represents the "meme-idea" resource
+  const useMemeIdeaQuery = createQuery(
+    // Key to uniquely identify the resource
+    ['meme-ideas'],
+    // Loading function that returns the data or error
+    async ({ id }) => {
+      try {
+        const memeIdea = await fetchDataSomehow(id);
+        return { success: true, data: memeIdea };
+      } catch (e) {
+        return { success: false, error: 'Oopsie!' };
+      }
     }
-  });
+  );
 
+  // The query param can be reactive to
   const param = $state({ id: 1 });
 
-  const { query } = memeIdeaQuery(param);
+  // Invoke the query to access its reactive state
+  const memeIdeaQuery = useMemeIdeaQuery(param);
+
+  // When destructuring, make sure to use $derived!
+  const { loading, data, error } = $derived(useMemeIdeaQuery(param));
 </script>
 
-{#if query.loading}Query is loading{/if}
-{#if query.error}Error: {query.error}{/if}
-{#if query.data}Data: {query.data}{/if}
+{#if memeIdeaQuery.loading}Query is loading{/if}
+{#if memeIdeaQuery.error}Error: {memeIdeaQuery.error}{/if}
+{#if memeIdeaQuery.data}Data: {memeIdeaQuery.data}{/if}
 
-<button onclick={() => param.id++}> Next Meme Idea</button>
+<button onclick={memeIdeaQuery.reload}> Reload</button>
+
+<button onclick={() => memeId++}> Next Meme Idea</button>
 ```
 
 ## Basics
@@ -63,7 +76,7 @@ Each query is loaded when it is first used (unless there exists not yet stale ca
 
 ## API Reference
 
-Svelte Tiny Query only exports 2 functions (`createQuery` and `invalidateQueries`), 2 tiny helpers (`fail` and `succeed`) and one readonly state (`globalLoading`).
+Svelte Tiny Query only exports 2 functions (`createQuery` and `invalidateQueries`), 2 tiny helpers (`fail` and `succeed`) and one readonly state (`queryInfos`).
 
 ### `createQuery`
 
@@ -160,15 +173,24 @@ Invalidates a query and its children by key. If a query is invalidated, and it i
 
 If multiple identical queries are invalidated, the loading function is only run once.
 
-### `globalLoading`
+### `queryInfos`
 
 ```typescript
 {
-  count: number;
+  isLoading: bool;
+  loadingQueries: string[][];
+  activeQueries: string[][];
+  cachedQueries: string[][];
 }
 ```
 
-Reactive value that holds the number of currently active loadings.
+- **isLoading**: Indicates if any query is currently loading.
+
+- **loadingQueries**: Array of the keys of the currently loading queries.
+
+- **activeQueries**: Array of the keys of the currently active queries. A query is considered active, when it is used in a currently mounted component.
+
+- **cachedQueries**: Array of the keys of the currently cached queries. A query is cached, when it has been loaded and has since not been force-invalidated.
 
 ## What is Omited
 

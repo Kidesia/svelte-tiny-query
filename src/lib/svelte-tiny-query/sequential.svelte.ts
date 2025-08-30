@@ -7,9 +7,11 @@ import {
 	dataByKey,
 	errorByKey,
 	loadedTimeStampByKey,
-	staleTimeStampByKey
+	staleTimeStampByKey,
+	cursorByKey,
+	hasMoreByKey
 } from './cache.svelte';
-import { registerActiveQuery, withLoading } from './queryHelpers.svelte';
+import { trackActiveQueriesCount, withLoading } from './queryHelpers.svelte';
 
 // Types
 
@@ -21,19 +23,19 @@ import { registerActiveQuery, withLoading } from './queryHelpers.svelte';
 export type SequentialQueryState<TData, TError> = {
 	/** Indicates if the query is currently loading. */
 	loading: boolean;
-	/** The data returned by the query. This can be `undefined` if `initialData` was not provided and the query hasn't loaded yet. */
+	/** An array of the data returned by the query for each page. Can be `undefined` if `initialData` was not provided and the query hasn't loaded yet. */
 	data: TData;
-	/** Any error that occurred during the query, or undefined if no error. */
+	/** Any error that was returned by the loading function, or undefined if no error. */
 	error: TError | undefined;
-	/** Indicates if there is more data to load (undefined while loading). */
+	/** Indicates if there is more data to load (always undefined while loading). */
 	hasMore: boolean | undefined;
-	/** The timestamp when the data was fetched, or `undefined` if the data hasn't been loaded yet. */
+	/** The timestamp when the last page was fetched, or `undefined` if no data has been loaded yet. */
 	loadedTimeStamp: number | undefined;
 	/** The timestamp when the data will be considered stale, or `undefined` if no staleTime is set or data hasn't loaded. */
 	staleTimeStamp: number | undefined;
-	/** Function to load the next slice of data (if there is more data) */
+	/** Function to load the next slice of data (if there is more data). */
 	loadMore: () => void;
-	/** Reload function to manually trigger the query again. */
+	/** Reload function to manually trigger the query again. Resets the cursor to undefined. */
 	reload: () => void;
 };
 
@@ -48,10 +50,7 @@ export type SequentialLoadResult<TData, TCursor, TError> =
 	| SequentialLoadSuccess<TData, TCursor>
 	| LoadFailure<TError>;
 
-// States
-
-const cursorByKey: Record<string, unknown> = $state({});
-const hasMoreByKey: Record<string, boolean | undefined> = $state({});
+// Query Constructor
 
 export function createSequentialQuery<
 	TError,
@@ -164,7 +163,7 @@ export function createSequentialQuery<
 			currentKey: generateKey(key, param).join('__')
 		});
 
-		registerActiveQuery(internalState.currentKey);
+		trackActiveQueriesCount(internalState.currentKey);
 
 		$effect(() => {
 			// Reset state and run the query loader when the queryParam changes

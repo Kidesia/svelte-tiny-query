@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidateQueries, globalLoading, queryInfos } from '$lib/index.js';
+	import { invalidateQueries, queryInfos } from '$lib/index.js';
 
 	const { children } = $props();
 
@@ -38,7 +38,7 @@
 		</div>
 
 		<div>
-			{globalLoading.count} loading
+			{queryInfos.loadingQueries.length} loading
 		</div>
 	</footer>
 </div>

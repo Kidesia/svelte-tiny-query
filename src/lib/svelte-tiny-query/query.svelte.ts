@@ -2,6 +2,7 @@ import { untrack } from 'svelte';
 
 import type { LoadResult } from './loadHelpers.js';
 import { generateKey } from './utils.js';
+import { trackActiveQueriesCount, withLoading } from './queryHelpers.svelte';
 import {
 	queryLoaderByKey,
 	loadingByKey,
@@ -10,7 +11,6 @@ import {
 	loadedTimeStampByKey,
 	staleTimeStampByKey
 } from './cache.svelte';
-import { registerActiveQuery, withLoading } from './queryHelpers.svelte';
 
 /**
  * Represents the current state of a query.
@@ -108,10 +108,11 @@ export function createQuery<TData, TError, TParam = void>(
 			currentKey: generateKey(key, param).join('__')
 		});
 
-		registerActiveQuery(internalState.currentKey);
+		// Register the active query (and unregister later)
+		trackActiveQueriesCount(internalState.currentKey);
 
 		$effect(() => {
-			// Reset state and run the query loader when the queryParam changes
+			// Reset state and run the query loader when key or queryParam changes
 			const cacheKey = generateKey(key, param).join('__');
 
 			untrack(() => {
@@ -121,24 +122,21 @@ export function createQuery<TData, TError, TParam = void>(
 				// Create and store the query loader if it doesn't exist
 				if (!queryLoaderByKey[cacheKey]) {
 					const frozenQueryParam = $state.snapshot(param) as TParam;
-
-					const queryLoaderWithParam = async () => {
-						const cacheKey = generateKey(key, param).join('__');
+					queryLoaderByKey[cacheKey] = async () => {
 						withLoading(
-							cacheKey,
+							generateKey(key, param).join('__'),
 							() => loadFn(frozenQueryParam),
 							options?.staleTime
 						);
 					};
-
-					queryLoaderByKey[cacheKey] = queryLoaderWithParam;
 				}
 
-				// Run the query
+				// Run the query loader
 				queryLoaderByKey[cacheKey]();
 			});
 		});
 
+		// Return reactive query state
 		return {
 			get loading() {
 				return !!loadingByKey[internalState.currentKey];
@@ -159,7 +157,7 @@ export function createQuery<TData, TError, TParam = void>(
 				return staleTimeStampByKey[internalState.currentKey];
 			},
 			reload: () => {
-				queryLoaderByKey[internalState.currentKey]?.('reload');
+				queryLoaderByKey[internalState.currentKey]?.();
 			}
 		};
 	};
