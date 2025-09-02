@@ -53,7 +53,7 @@ And use it in your components.
 
 <button onclick={memeIdeaQuery.reload}> Reload</button>
 
-<button onclick={() => memeId++}> Next Meme Idea</button>
+<button onclick={() => param++}> Next Meme Idea</button>
 ```
 
 ## Basics
