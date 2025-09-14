@@ -12,7 +12,7 @@
 		});
 	};
 
-	const emojiQuery = createQuery(
+	const useEmojiQuery = createQuery(
 		['emoji'],
 		async (param: { id: number }) => {
 			await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -30,9 +30,7 @@
 
 	const param = $state({ id: 1 });
 
-	const { loading, error, data, staleTimeStamp, reload } = $derived(
-		emojiQuery(param)
-	);
+	const emojiQuery = useEmojiQuery(param);
 </script>
 
 <div class="emojis-container">
@@ -41,33 +39,33 @@
 	</h1>
 
 	<div class="flex">
-		<button onclick={reload}>↻</button>
+		<button onclick={emojiQuery.reload}>↻</button>
 		<button onclick={() => param.id--}>-</button>
 		<button onclick={() => param.id++}>+</button>
 	</div>
 
-	<div class="emoji" class:loading>
-		{#if error}
-			<p>Error: {error}</p>
+	<div class="emoji" class:loading={emojiQuery.loading}>
+		{#if emojiQuery.error}
+			<p>Error: {emojiQuery.error}</p>
 		{/if}
 
-		{#if data}
-			<div class="content">{data.emoji}</div>
+		{#if emojiQuery.data}
+			<div class="content">{emojiQuery.data.emoji}</div>
 			<div>
-				<div>id: {data.id}</div>
-				<div>time: {formatHHMMSS(data.fetchedAt)}</div>
+				<div>id: {emojiQuery.data.id}</div>
+				<div>time: {formatHHMMSS(emojiQuery.data.fetchedAt)}</div>
 			</div>
 			<div>
 				staleTime:
-				{#if staleTimeStamp}
-					{formatHHMMSS(new Date(staleTimeStamp))}
+				{#if emojiQuery.staleTimeStamp}
+					{formatHHMMSS(new Date(emojiQuery.staleTimeStamp))}
 				{:else}
 					not
 				{/if}
 			</div>
 		{/if}
 
-		{#if loading}
+		{#if emojiQuery.loading}
 			<div>Loading</div>
 		{/if}
 	</div>
