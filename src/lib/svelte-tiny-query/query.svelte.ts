@@ -109,11 +109,12 @@ export function createQuery<TData, TError, TParam = void>(
 		});
 
 		// Register the active query (and unregister later)
-		trackActiveQueriesCount(internalState.currentKey);
+		trackActiveQueriesCount(key, param);
 
 		$effect(() => {
 			// Reset state and run the query loader when key or queryParam changes
 			const cacheKey = generateKey(key, param).join('__');
+			const frozenParam = $state.snapshot(param) as TParam;
 
 			untrack(() => {
 				// Set the new cache key in the internal state
@@ -121,11 +122,10 @@ export function createQuery<TData, TError, TParam = void>(
 
 				// Create and store the query loader if it doesn't exist
 				if (!queryLoaderByKey[cacheKey]) {
-					const frozenQueryParam = $state.snapshot(param) as TParam;
 					queryLoaderByKey[cacheKey] = async () => {
 						withLoading(
-							generateKey(key, param).join('__'),
-							() => loadFn(frozenQueryParam),
+							cacheKey,
+							() => loadFn(frozenParam),
 							options?.staleTime
 						);
 					};
