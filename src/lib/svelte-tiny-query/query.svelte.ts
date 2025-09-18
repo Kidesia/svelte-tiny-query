@@ -109,7 +109,7 @@ export function createQuery<TData, TError, TParam = void>(
 		});
 
 		// Register the active query (and unregister later)
-		trackActiveQueriesCount(internalState.currentKey);
+		trackActiveQueriesCount(key, param);
 
 		$effect(() => {
 			// Reset state and run the query loader when key or queryParam changes

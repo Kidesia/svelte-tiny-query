@@ -163,7 +163,7 @@ export function createSequentialQuery<
 			currentKey: generateKey(key, param).join('__')
 		});
 
-		trackActiveQueriesCount(internalState.currentKey);
+		trackActiveQueriesCount(key, param);
 
 		$effect(() => {
 			// Reset state and run the query loader when the queryParam changes
