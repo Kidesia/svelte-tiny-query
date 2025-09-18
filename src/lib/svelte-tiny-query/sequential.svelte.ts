@@ -213,7 +213,8 @@ export function createSequentialQuery<
 
 		return {
 			get loading() {
-				return !!loadingByKey[internalState.currentKey];
+				const isLoading = loadingByKey[internalState.currentKey];
+				return isLoading === undefined ? true : isLoading;
 			},
 			get data() {
 				return (

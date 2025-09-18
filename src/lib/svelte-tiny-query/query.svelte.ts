@@ -139,7 +139,8 @@ export function createQuery<TData, TError, TParam = void>(
 		// Return reactive query state
 		return {
 			get loading() {
-				return !!loadingByKey[internalState.currentKey];
+				const isLoading = loadingByKey[internalState.currentKey];
+				return isLoading === undefined ? true : isLoading;
 			},
 			get data() {
 				return (
