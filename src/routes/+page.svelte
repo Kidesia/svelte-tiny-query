@@ -3,8 +3,6 @@
 	import QueryContainer from './QueryContainer.svelte';
 
 	import { queryInfos } from '../lib/index.ts';
-
-	$inspect({ activeQueries: queryInfos.activeQueries });
 </script>
 
 <main>
