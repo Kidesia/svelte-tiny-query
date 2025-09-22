@@ -104,6 +104,7 @@ export function createQuery<TData, TError, TParam = void>(
 	}
 ): (param: TParam) => QueryState<TData | undefined, TError> {
 	return (param: TParam) => {
+		// Internal state to track the current cache key
 		const internalState = $state({
 			currentKey: generateKey(key, param).join('__')
 		});
@@ -116,24 +117,26 @@ export function createQuery<TData, TError, TParam = void>(
 			const cacheKey = generateKey(key, param).join('__');
 			const frozenParam = $state.snapshot(param) as TParam;
 
-			untrack(() => {
-				// Set the new cache key in the internal state
-				internalState.currentKey = cacheKey;
+			// Set the new cache key in the internal state
+			internalState.currentKey = cacheKey;
 
-				// Create and store the query loader if it doesn't exist
-				if (!queryLoaderByKey[cacheKey]) {
-					queryLoaderByKey[cacheKey] = async () => {
+			if (!queryLoaderByKey[cacheKey]) {
+				// Create and store the query loader if it doesn't exist (will trigger this effect again)
+				queryLoaderByKey[cacheKey] = async () => {
+					untrack(() => {
 						withLoading(
 							cacheKey,
-							() => loadFn(frozenParam),
+							() => {
+								return loadFn(frozenParam);
+							},
 							options?.staleTime
 						);
-					};
-				}
-
-				// Run the query loader
+					});
+				};
+			} else {
+				// Actually run the query loader
 				queryLoaderByKey[cacheKey]();
-			});
+			}
 		});
 
 		// Return reactive query state
