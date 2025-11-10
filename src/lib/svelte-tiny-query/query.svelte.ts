@@ -133,10 +133,9 @@ export function createQuery<TData, TError, TParam = void>(
 						);
 					});
 				};
-			} else {
-				// Actually run the query loader
-				queryLoaderByKey[cacheKey]();
 			}
+
+			queryLoaderByKey[cacheKey]();
 		});
 
 		// Return reactive query state
