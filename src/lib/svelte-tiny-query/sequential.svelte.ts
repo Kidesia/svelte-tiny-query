@@ -163,11 +163,12 @@ export function createSequentialQuery<
 			currentKey: generateKey(key, param).join('__')
 		});
 
-		trackActiveQueriesCount(internalState.currentKey);
+		trackActiveQueriesCount(key, param);
 
 		$effect(() => {
 			// Reset state and run the query loader when the queryParam changes
 			const cacheKey = generateKey(key, param).join('__');
+			const frozenQueryParam = $state.snapshot(param) as TParam;
 
 			untrack(() => {
 				// Set the new cache key in the internal state
@@ -175,8 +176,6 @@ export function createSequentialQuery<
 
 				// Create and store the query loader if it doesn't exist
 				if (!queryLoaderByKey[cacheKey]) {
-					const frozenQueryParam = $state.snapshot(param) as TParam;
-
 					const queryLoaderWithParam = async (mode: string) => {
 						const cacheKey = generateKey(key, param).join('__');
 

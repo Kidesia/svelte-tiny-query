@@ -1,6 +1,8 @@
 <script lang="ts">
 	import MemeIdea from './MemeIdea.svelte';
 	import QueryContainer from './QueryContainer.svelte';
+
+	import { queryInfos } from '../lib/index.ts';
 </script>
 
 <main>
@@ -10,6 +12,12 @@
 				<MemeIdea />
 				<MemeIdea />
 				<MemeIdea />
+			</div>
+
+			<div>
+				Active Queries: {JSON.stringify(
+					$state.snapshot(queryInfos.activeQueries)
+				)}
 			</div>
 		</QueryContainer>
 	</section>

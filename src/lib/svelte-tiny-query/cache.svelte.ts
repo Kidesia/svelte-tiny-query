@@ -1,8 +1,12 @@
+// Non-Reactive State
+
+export const queryLoaderByKey = {} as Record<
+	string,
+	(mode?: string) => Promise<void>
+>;
+
 // Query State
 
-export const queryLoaderByKey = $state(
-	{} as Record<string, (mode?: string) => Promise<void>>
-);
 export const loadingByKey = $state({} as Record<string, boolean>);
 export const dataByKey = $state({} as Record<string, unknown>);
 export const errorByKey = $state({} as Record<string, unknown>);

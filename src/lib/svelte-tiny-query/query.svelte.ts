@@ -104,36 +104,38 @@ export function createQuery<TData, TError, TParam = void>(
 	}
 ): (param: TParam) => QueryState<TData | undefined, TError> {
 	return (param: TParam) => {
+		// Internal state to track the current cache key
 		const internalState = $state({
 			currentKey: generateKey(key, param).join('__')
 		});
 
 		// Register the active query (and unregister later)
-		trackActiveQueriesCount(internalState.currentKey);
+		trackActiveQueriesCount(key, param);
 
 		$effect(() => {
 			// Reset state and run the query loader when key or queryParam changes
 			const cacheKey = generateKey(key, param).join('__');
+			const frozenParam = $state.snapshot(param) as TParam;
 
-			untrack(() => {
-				// Set the new cache key in the internal state
-				internalState.currentKey = cacheKey;
+			// Set the new cache key in the internal state
+			internalState.currentKey = cacheKey;
 
-				// Create and store the query loader if it doesn't exist
-				if (!queryLoaderByKey[cacheKey]) {
-					const frozenQueryParam = $state.snapshot(param) as TParam;
-					queryLoaderByKey[cacheKey] = async () => {
+			if (!queryLoaderByKey[cacheKey]) {
+				// Create and store the query loader if it doesn't exist (will trigger this effect again)
+				queryLoaderByKey[cacheKey] = async () => {
+					untrack(() => {
 						withLoading(
-							generateKey(key, param).join('__'),
-							() => loadFn(frozenQueryParam),
+							cacheKey,
+							() => {
+								return loadFn(frozenParam);
+							},
 							options?.staleTime
 						);
-					};
-				}
+					});
+				};
+			}
 
-				// Run the query loader
-				queryLoaderByKey[cacheKey]();
-			});
+			queryLoaderByKey[cacheKey]();
 		});
 
 		// Return reactive query state

@@ -8,17 +8,33 @@ import {
 	dataByKey
 } from './cache.svelte';
 import type { LoadResult } from './loadHelpers.js';
+import { generateKey } from './utils.js';
 
-export function trackActiveQueriesCount(key: string) {
+export function trackActiveQueriesCount(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	key: string[] | ((p: any) => string[]),
+	param: unknown
+) {
 	$effect(() => {
+		const cacheKey = generateKey(key, param).join('__');
+
 		untrack(() => {
 			// Increment the active query count for this cache key
-			activeQueryCounts[key] = (activeQueryCounts[key] ?? 0) + 1;
+			activeQueryCounts[cacheKey] = (activeQueryCounts[cacheKey] ?? 0) + 1;
 		});
 
 		return () => {
 			// Decrement the active query count when the query is destroyed
-			activeQueryCounts[key] = Math.max((activeQueryCounts[key] ?? 0) - 1, 0);
+			const newCount = Math.max((activeQueryCounts[cacheKey] ?? 0) - 1, 0);
+			if (newCount <= 0) {
+				delete activeQueryCounts[cacheKey];
+				return;
+			} else {
+				activeQueryCounts[cacheKey] = Math.max(
+					(activeQueryCounts[cacheKey] ?? 0) - 1,
+					0
+				);
+			}
 		};
 	});
 }
