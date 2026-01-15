@@ -68,8 +68,6 @@ export function updateQueryData(
 
 	Object.keys(activeQueryCounts).forEach((activeKey) => {
 		if (activeKey.startsWith(cacheKey) && activeQueryCounts[activeKey] > 0) {
-			console.log('Updating data for active key:', activeKey);
-			console.log('Current data:', $state.snapshot(dataByKey[activeKey]));
 			dataByKey[activeKey] = updater(dataByKey[activeKey]);
 		}
 	});
