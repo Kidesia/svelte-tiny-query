@@ -66,8 +66,6 @@ export function updateQueryData(
 ) {
 	const cacheKey = key.join('__');
 
-	console.log('Updating query data for key:', cacheKey);
-
 	Object.keys(activeQueryCounts).forEach((activeKey) => {
 		if (activeKey.startsWith(cacheKey) && activeQueryCounts[activeKey] > 0) {
 			console.log('Updating data for active key:', activeKey);
