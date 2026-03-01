@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'vitest';
 
-import { serializeParam, generateKey } from '../../src/lib/svelte-tiny-query/utils';
+import {
+	serializeParam,
+	generateKey,
+	KEY_SEPARATOR
+} from '../../src/lib/svelte-tiny-query/utils';
 
 describe('serializeParam', () => {
 	test('returns empty string for null', () => {
@@ -36,7 +40,9 @@ describe('serializeParam', () => {
 	});
 
 	test('serializes flat object', () => {
-		expect(serializeParam({ id: 1, name: 'test' })).toBe('{"id":1,"name":"test"}');
+		expect(serializeParam({ id: 1, name: 'test' })).toBe(
+			'{"id":1,"name":"test"}'
+		);
 	});
 
 	test('produces same output regardless of key insertion order', () => {
@@ -59,6 +65,19 @@ describe('serializeParam', () => {
 
 	test('serializes array of objects', () => {
 		expect(serializeParam([{ a: 1 }, { b: 2 }])).toBe('[{"a":1},{"b":2}]');
+	});
+
+	test('produces same key for nested objects with different key order (deep-sort)', () => {
+		const a = serializeParam({ filter: { z: 1, a: 2 }, page: 1 });
+		const b = serializeParam({ filter: { a: 2, z: 1 }, page: 1 });
+		// BUG: only top-level keys are sorted, nested object keys are not
+		expect(a).toBe(b);
+	});
+
+	test('produces same key for deeply nested objects with different key order', () => {
+		const a = serializeParam({ level1: { level2: { z: 'last', a: 'first' } } });
+		const b = serializeParam({ level1: { level2: { a: 'first', z: 'last' } } });
+		expect(a).toBe(b);
 	});
 
 	test('distinguishes different nested values', () => {
@@ -125,16 +144,17 @@ describe('generateKey', () => {
 	});
 
 	test('produces different keys for different params', () => {
-		const key1 = generateKey(['todos'], { id: 1 }).join('__');
-		const key2 = generateKey(['todos'], { id: 2 }).join('__');
+		const key1 = generateKey(['todos'], { id: 1 }).join(KEY_SEPARATOR);
+		const key2 = generateKey(['todos'], { id: 2 }).join(KEY_SEPARATOR);
 		expect(key1).not.toBe(key2);
 	});
 
 	test('joined key for "todo" does not collide with "todoList"', () => {
-		const todoKey = generateKey(['todo'], undefined).join('__');
-		const todoListKey = generateKey(['todoList'], undefined).join('__');
-		expect(todoListKey.startsWith(todoKey + '__')).toBe(false);
+		const todoKey = generateKey(['todo'], undefined).join(KEY_SEPARATOR);
+		const todoListKey = generateKey(['todoList'], undefined).join(
+			KEY_SEPARATOR
+		);
+		expect(todoListKey.startsWith(todoKey + KEY_SEPARATOR)).toBe(false);
 		expect(todoKey).not.toBe(todoListKey);
 	});
 });
-

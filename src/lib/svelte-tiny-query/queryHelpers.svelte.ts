@@ -8,7 +8,7 @@ import {
 	dataByKey
 } from './cache.svelte';
 import type { LoadResult } from './loadHelpers.js';
-import { generateKey } from './utils.js';
+import { generateKey, KEY_SEPARATOR } from './utils.js';
 
 export function trackActiveQueriesCount(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,7 +16,7 @@ export function trackActiveQueriesCount(
 	paramGetter: () => unknown
 ) {
 	$effect(() => {
-		const cacheKey = generateKey(key, paramGetter()).join('__');
+		const cacheKey = generateKey(key, paramGetter()).join(KEY_SEPARATOR);
 
 		untrack(() => {
 			// Increment the active query count for this cache key

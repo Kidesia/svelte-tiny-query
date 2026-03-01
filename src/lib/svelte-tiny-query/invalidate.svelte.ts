@@ -8,6 +8,7 @@ import {
 	hasMoreByKey,
 	cursorByKey
 } from './cache.svelte';
+import { KEY_SEPARATOR } from './utils.js';
 
 /**
  * Invalidates queries based on the provided key.
@@ -22,8 +23,8 @@ export function invalidateQueries(
 	key: string[],
 	options?: { force?: boolean; exact?: boolean }
 ) {
-	const cacheKey = key.join('__');
-	const cacheKeyPrefix = cacheKey + '__';
+	const cacheKey = key.join(KEY_SEPARATOR);
+	const cacheKeyPrefix = cacheKey + KEY_SEPARATOR;
 
 	const matches = (candidate: string) =>
 		options?.exact
@@ -67,8 +68,8 @@ export function updateQueryData(
 	key: string[],
 	updater: (currentData: unknown) => unknown
 ) {
-	const cacheKey = key.join('__');
-	const cacheKeyPrefix = cacheKey + '__';
+	const cacheKey = key.join(KEY_SEPARATOR);
+	const cacheKeyPrefix = cacheKey + KEY_SEPARATOR;
 
 	Object.keys(activeQueryCounts).forEach((activeKey) => {
 		if (

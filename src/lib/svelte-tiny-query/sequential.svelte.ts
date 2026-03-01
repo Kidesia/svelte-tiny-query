@@ -1,6 +1,6 @@
 import { untrack } from 'svelte';
 
-import { generateKey } from './utils.js';
+import { generateKey, KEY_SEPARATOR } from './utils.js';
 import {
 	queryLoaderByKey,
 	loadingByKey,
@@ -175,7 +175,7 @@ export function createSequentialQuery<
 
 		// State
 		const internalState = $state({
-			currentKey: generateKey(key, getParam()).join('__')
+			currentKey: generateKey(key, getParam()).join(KEY_SEPARATOR)
 		});
 
 		trackActiveQueriesCount(key, getParam);
@@ -183,7 +183,7 @@ export function createSequentialQuery<
 		$effect(() => {
 			// Reset state and run the query loader when the queryParam changes
 			const param = getParam();
-			const cacheKey = generateKey(key, param).join('__');
+			const cacheKey = generateKey(key, param).join(KEY_SEPARATOR);
 			const frozenQueryParam = $state.snapshot(param) as TParam;
 
 			untrack(() => {

@@ -1,3 +1,7 @@
+// ASCII Unit Separator — designed for separating fields in data.
+// Cannot appear in any reasonable user key string, making split() safe.
+export const KEY_SEPARATOR = '\x1F';
+
 // Key Helpers
 
 /**
@@ -8,14 +12,25 @@
 export function serializeParam(param: unknown): string {
 	if (param === null || param === undefined) return '';
 	if (typeof param !== 'object') return JSON.stringify(param);
-	if (Array.isArray(param)) return JSON.stringify(param);
+	return JSON.stringify(deepSortKeys(param));
+}
 
-	// Sort keys for deterministic output
-	const sorted: Record<string, unknown> = {};
-	for (const key of Object.keys(param as Record<string, unknown>).sort()) {
-		sorted[key] = (param as Record<string, unknown>)[key];
+/**
+ * Recursively sorts object keys for deterministic serialization.
+ * Arrays are traversed but their order is preserved.
+ */
+function deepSortKeys(value: unknown): unknown {
+	if (value === null || value === undefined || typeof value !== 'object') {
+		return value;
 	}
-	return JSON.stringify(sorted);
+	if (Array.isArray(value)) {
+		return value.map(deepSortKeys);
+	}
+	const sorted: Record<string, unknown> = {};
+	for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+		sorted[key] = deepSortKeys((value as Record<string, unknown>)[key]);
+	}
+	return sorted;
 }
 
 export function generateKey<T>(

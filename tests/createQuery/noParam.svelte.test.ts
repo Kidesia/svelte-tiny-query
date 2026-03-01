@@ -5,6 +5,7 @@ import { invalidateQueries } from '../../src/lib/svelte-tiny-query/invalidate.sv
 import { activeQueryCounts } from '../../src/lib/svelte-tiny-query/cache.svelte';
 import NoParam from './NoParam.svelte';
 import MultipleNoParam from './MultipleNoParam.svelte';
+import TripleNoParam from './TripleNoParam.svelte';
 import MisusedInDerived from './MisusedInDerived.svelte';
 
 describe('Normal Query - No Parameter', () => {
@@ -775,6 +776,58 @@ describe('Normal Query - No Parameter', () => {
 				staleTimeStamp: mockDate.getTime() + 1000
 			}
 		]);
+	});
+
+	test('activeQueryCounts correctly decrements from 3 (double-decrement bug)', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const states1 = $state({ value: [] });
+		const states2 = $state({ value: [] });
+		const states3 = $state({ value: [] });
+		const rendered = render(TripleNoParam, {
+			props: {
+				states1,
+				states2,
+				states3,
+				key: ['triple-decrement-test'],
+				loadingFn: async () => ({ success: true, data: 'data' })
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data 1: data')).toBeInTheDocument();
+			expect(rendered.queryByText('Data 2: data')).toBeInTheDocument();
+			expect(rendered.queryByText('Data 3: data')).toBeInTheDocument();
+		});
+
+		// All 3 components active, count should be 3
+		expect(activeQueryCounts['triple-decrement-test']).toBe(3);
+
+		// Hide component 1 — count should go from 3 to 2, NOT 3 to 1
+		rendered.queryByText('Hide 1')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Component 1 is hidden')).toBeInTheDocument();
+		});
+
+		// BUG: double-decrement causes this to be 1 instead of 2
+		expect(activeQueryCounts['triple-decrement-test']).toBe(2);
+
+		// Hide component 2 — count should go from 2 to 1
+		rendered.queryByText('Hide 2')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Component 2 is hidden')).toBeInTheDocument();
+		});
+
+		expect(activeQueryCounts['triple-decrement-test']).toBe(1);
+
+		// Hide component 3 — count should be removed
+		rendered.queryByText('Hide 3')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Component 3 is hidden')).toBeInTheDocument();
+		});
+
+		expect(activeQueryCounts['triple-decrement-test']).toBeUndefined();
 	});
 
 	test('activeQueryCounts decrements when component is destroyed', async () => {

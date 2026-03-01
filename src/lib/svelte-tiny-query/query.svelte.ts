@@ -1,7 +1,7 @@
 import { untrack } from 'svelte';
 
 import type { LoadResult } from './loadHelpers.js';
-import { generateKey } from './utils.js';
+import { generateKey, KEY_SEPARATOR } from './utils.js';
 import { trackActiveQueriesCount, withLoading } from './queryHelpers.svelte';
 import {
 	queryLoaderByKey,
@@ -118,7 +118,7 @@ export function createQuery<TData, TError, TParam = void>(
 
 		// Internal state to track the current cache key
 		const internalState = $state({
-			currentKey: generateKey(key, getParam()).join('__')
+			currentKey: generateKey(key, getParam()).join(KEY_SEPARATOR)
 		});
 
 		// Register the active query (and unregister later)
@@ -127,7 +127,7 @@ export function createQuery<TData, TError, TParam = void>(
 		$effect(() => {
 			// Reset state and run the query loader when key or queryParam changes
 			const param = getParam();
-			const cacheKey = generateKey(key, param).join('__');
+			const cacheKey = generateKey(key, param).join(KEY_SEPARATOR);
 			const frozenParam = $state.snapshot(param) as TParam;
 
 			// Set the new cache key in the internal state
