@@ -707,4 +707,71 @@ describe('Normal Query - No Parameter', () => {
 			}
 		]);
 	});
+
+	test('Recovers from error on reload', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		let i = $state(0);
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['error-recovery-test'],
+				loadingFn: async () => {
+					i++;
+					return i === 1
+						? { success: false, error: 'failed' }
+						: { success: true, data: 'recovered' };
+				}
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Error: failed')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Reload')?.click();
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: recovered')).toBeInTheDocument();
+		});
+
+		expect(states.value).toEqual([
+			// Initial state
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
+			// After error
+			{
+				data: undefined,
+				error: 'failed',
+				loading: false,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
+			// Reloading (error is cleared when reload starts)
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined
+			},
+			// After recovery
+			{
+				data: 'recovered',
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 1000,
+				staleTimeStamp: mockDate.getTime() + 1000
+			}
+		]);
+	});
 });
