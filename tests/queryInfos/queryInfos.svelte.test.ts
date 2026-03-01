@@ -27,7 +27,7 @@ describe('Query Infos', () => {
 			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
 			expect(
 				rendered.queryByText(
-					`Active Queries: [["reactive-param-active-queries","id:1"]]`
+					`Active Queries: [["reactive-param-active-queries","{\\"id\\":1}"]]`
 				)
 			).toBeInTheDocument();
 		});
@@ -51,9 +51,9 @@ describe('Query Infos', () => {
 
 		// TODO: fix passing back the history of active queries in order to assert on it
 		// expect(activeQueries.value).toEqual([
-		// 	[['reactive-param-active-queries', 'id:1']],
-		// 	[['reactive-param-active-queries', 'id:2']],
-		// 	[['reactive-param-active-queries', 'id:1']]
+		// 	[['reactive-param-active-queries', '{"id":1}']],
+		// 	[['reactive-param-active-queries', '{"id":2}']],
+		// 	[['reactive-param-active-queries', '{"id":1}']]
 		// ]);
 	});
 });
