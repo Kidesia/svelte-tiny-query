@@ -54,3 +54,21 @@ export function invalidateQueries(
 		}
 	});
 }
+
+/**
+ * Updates the cached data for a specific query key using an updater function.
+ * @param key The key of the query to update.
+ * @param updater A function that receives the current data and returns the updated data.
+ */
+export function updateQueryData(
+	key: string[],
+	updater: (currentData: unknown) => unknown
+) {
+	const cacheKey = key.join('__');
+
+	Object.keys(activeQueryCounts).forEach((activeKey) => {
+		if (activeKey.startsWith(cacheKey) && activeQueryCounts[activeKey] > 0) {
+			dataByKey[activeKey] = updater(dataByKey[activeKey]);
+		}
+	});
+}
