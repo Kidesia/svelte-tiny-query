@@ -2,8 +2,10 @@ import { describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
 import { invalidateQueries } from '../../src/lib/svelte-tiny-query/invalidate.svelte';
+import { activeQueryCounts } from '../../src/lib/svelte-tiny-query/cache.svelte';
 import NoParam from './NoParam.svelte';
 import MultipleNoParam from './MultipleNoParam.svelte';
+import MisusedInDerived from './MisusedInDerived.svelte';
 
 describe('Normal Query - No Parameter', () => {
 	test('Loads data', async () => {
@@ -773,5 +775,69 @@ describe('Normal Query - No Parameter', () => {
 				staleTimeStamp: mockDate.getTime() + 1000
 			}
 		]);
+	});
+
+	test('activeQueryCounts decrements when component is destroyed', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const states1 = $state({ value: [] });
+		const states2 = $state({ value: [] });
+		const rendered = render(MultipleNoParam, {
+			props: {
+				states1,
+				states2,
+				key: ['unmount-cleanup-test'],
+				loadingFn: async () => ({ success: true, data: 'data' })
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data 1: data')).toBeInTheDocument();
+			expect(rendered.queryByText('Data 2: data')).toBeInTheDocument();
+		});
+
+		// Both components are active, count should be 2
+		expect(activeQueryCounts['unmount-cleanup-test']).toBe(2);
+
+		// Hide component 1
+		rendered.queryByText('Hide 1')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Component 1 is hidden')).toBeInTheDocument();
+		});
+
+		// Count should decrement to 1
+		expect(activeQueryCounts['unmount-cleanup-test']).toBe(1);
+
+		// Hide component 2
+		rendered.queryByText('Hide 2')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Component 2 is hidden')).toBeInTheDocument();
+		});
+
+		// Count should be removed (deleted when 0)
+		expect(activeQueryCounts['unmount-cleanup-test']).toBeUndefined();
+	});
+
+	test('Warns when query function is called inside $derived', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		render(MisusedInDerived, {
+			props: {
+				key: ['derived-warning-test'],
+				loadingFn: async () => ({ success: true, data: 'data' })
+			}
+		});
+
+		await waitFor(() => {
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining('was called inside a reactive context')
+			);
+		});
+
+		warnSpy.mockRestore();
 	});
 });

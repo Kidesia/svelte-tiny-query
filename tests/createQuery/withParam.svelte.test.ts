@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
 import WithParam from './WithParam.svelte';
+import WithPrimitiveParam from './WithPrimitiveParam.svelte';
 import MultipleWithParams from './MultipleWithParams.svelte';
 
 describe('Normal Query - With Parameter', () => {
@@ -318,5 +319,58 @@ describe('Normal Query - With Parameter', () => {
 				staleTimeStamp: mockDate.getTime() + 3000
 			}
 		]);
+	});
+
+	test('Rapid param changes show only the final param data (last-value-wins)', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		// Track resolvers per param value so we can control response order
+		const resolvers: Record<number, () => void> = {};
+		const loadingFn = (param: number) =>
+			new Promise<{ success: true; data: string }>((resolve) => {
+				resolvers[param] = () =>
+					resolve({ success: true, data: `item-${param}` });
+			});
+
+		const states = $state({ value: [] });
+		const rendered = render(WithPrimitiveParam, {
+			props: {
+				states,
+				key: ['race-condition-test'],
+				loadingFn
+			}
+		});
+
+		// Wait for the initial render — param=1 is loading
+		await waitFor(() => {
+			expect(rendered.queryByText('Loading: true')).toBeInTheDocument();
+		});
+
+		// Rapidly increment param: 1 → 2 → 3 without waiting for any response
+		rendered.queryByText('Increment')?.click();
+		await vi.advanceTimersByTimeAsync(0); // flush microtasks
+		rendered.queryByText('Increment')?.click();
+		await vi.advanceTimersByTimeAsync(0);
+
+		// Now resolve responses OUT OF ORDER: resolve param 1 first, then 3, then 2
+		resolvers[1]?.();
+		await vi.advanceTimersByTimeAsync(0);
+
+		resolvers[3]?.();
+		await vi.advanceTimersByTimeAsync(0);
+
+		// The displayed data should be for param 3 (the current param)
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: item-3')).toBeInTheDocument();
+		});
+
+		// Resolve param 2 late — should NOT affect the displayed data
+		resolvers[2]?.();
+		await vi.advanceTimersByTimeAsync(0);
+
+		// Still showing param 3's data
+		expect(rendered.queryByText('Data: item-3')).toBeInTheDocument();
 	});
 });
