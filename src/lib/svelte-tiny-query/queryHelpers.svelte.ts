@@ -13,10 +13,10 @@ import { generateKey } from './utils.js';
 export function trackActiveQueriesCount(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	key: string[] | ((p: any) => string[]),
-	param: unknown
+	paramGetter: () => unknown
 ) {
 	$effect(() => {
-		const cacheKey = generateKey(key, param).join('__');
+		const cacheKey = generateKey(key, paramGetter()).join('__');
 
 		untrack(() => {
 			// Increment the active query count for this cache key

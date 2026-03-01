@@ -63,7 +63,7 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 		 */
 		staleTime?: number;
 	}
-): (queryParam: TParam) => QueryState<TData, TError>;
+): (paramGetter?: () => TParam) => QueryState<TData, TError>;
 
 /**
  * Creates a reactive query function for fetching and managing data in Svelte components.
@@ -76,7 +76,7 @@ export function createQuery<TError, TParam = void, TData = unknown>(
  * @param loadFn - An asynchronous function that fetches the data.
  * @param [options] - Optional query configuration.
  *
- * @returns A function returning the reactive query state.
+ * @returns A function that accepts an optional param getter and returns the reactive query state.
  */
 export function createQuery<TError, TParam = void, TData = unknown>(
 	key: string[] | ((queryParam: TParam) => string[]),
@@ -93,7 +93,7 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 		 */
 		staleTime?: number;
 	}
-): (queryParam: TParam) => QueryState<TData | undefined, TError>;
+): (paramGetter?: () => TParam) => QueryState<TData | undefined, TError>;
 
 export function createQuery<TData, TError, TParam = void>(
 	key: string[] | ((queryParam: TParam) => string[]),
@@ -102,18 +102,31 @@ export function createQuery<TData, TError, TParam = void>(
 		initialData?: TData;
 		staleTime?: number;
 	}
-): (param: TParam) => QueryState<TData | undefined, TError> {
-	return (param: TParam) => {
+): (paramGetter?: () => TParam) => QueryState<TData | undefined, TError> {
+	return (paramGetter?: () => TParam) => {
+		if ($effect.tracking()) {
+			console.warn(
+				'createQuery: The returned query function was called inside a reactive context ' +
+					'($derived, $effect, .map(), or template expression). ' +
+					'This will cause unexpected behavior. ' +
+					'Call it at the top level of your component instead, and use a getter for reactive params:\n' +
+					'  const query = myQuery(() => param);'
+			);
+		}
+
+		const getParam = paramGetter ?? (() => undefined as TParam);
+
 		// Internal state to track the current cache key
 		const internalState = $state({
-			currentKey: generateKey(key, param).join('__')
+			currentKey: generateKey(key, getParam()).join('__')
 		});
 
 		// Register the active query (and unregister later)
-		trackActiveQueriesCount(key, param);
+		trackActiveQueriesCount(key, getParam);
 
 		$effect(() => {
 			// Reset state and run the query loader when key or queryParam changes
+			const param = getParam();
 			const cacheKey = generateKey(key, param).join('__');
 			const frozenParam = $state.snapshot(param) as TParam;
 
@@ -121,7 +134,7 @@ export function createQuery<TData, TError, TParam = void>(
 			internalState.currentKey = cacheKey;
 
 			if (!queryLoaderByKey[cacheKey]) {
-				// Create and store the query loader if it doesn't exist (will trigger this effect again)
+				// Create and store the query loader if it doesn't exist
 				queryLoaderByKey[cacheKey] = async () => {
 					untrack(() => {
 						withLoading(

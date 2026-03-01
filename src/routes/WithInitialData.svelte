@@ -37,7 +37,7 @@
 
 	const param = $state({ id: 1 });
 
-	const query = emojiQuery(param);
+	const query = emojiQuery(() => param);
 </script>
 
 <div class="emojis-container">

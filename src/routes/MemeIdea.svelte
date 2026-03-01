@@ -30,7 +30,7 @@
 
 	const param = $state({ id: 1 });
 
-	const emojiQuery = useEmojiQuery(param);
+	const emojiQuery = useEmojiQuery(() => param);
 </script>
 
 <div class="emojis-container">

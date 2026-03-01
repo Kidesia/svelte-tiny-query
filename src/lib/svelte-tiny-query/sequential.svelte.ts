@@ -67,7 +67,7 @@ export function createSequentialQuery<
 		initialData: TData[];
 		staleTime?: number;
 	}
-): (queryParam: TParam) => SequentialQueryState<TData, TError>;
+): (paramGetter?: () => TParam) => SequentialQueryState<TData, TError>;
 
 export function createSequentialQuery<
 	TError,
@@ -84,7 +84,9 @@ export function createSequentialQuery<
 		initialData?: TData[];
 		staleTime?: number;
 	}
-): (queryParam: TParam) => SequentialQueryState<TData[] | undefined, TError>;
+): (
+	paramGetter?: () => TParam
+) => SequentialQueryState<TData[] | undefined, TError>;
 
 export function createSequentialQuery<
 	TData,
@@ -101,8 +103,21 @@ export function createSequentialQuery<
 		initialData?: TData[];
 		staleTime?: number;
 	}
-): (param: TParam) => SequentialQueryState<TData[] | undefined, TError> {
-	return (param: TParam) => {
+): (
+	paramGetter?: () => TParam
+) => SequentialQueryState<TData[] | undefined, TError> {
+	return (paramGetter?: () => TParam) => {
+		if ($effect.tracking()) {
+			console.warn(
+				'createSequentialQuery: The returned query function was called inside a reactive context ' +
+					'($derived, $effect, .map(), or template expression). ' +
+					'This will cause unexpected behavior. ' +
+					'Call it at the top level of your component instead, and use a getter for reactive params:\n' +
+					'  const query = myQuery(() => param);'
+			);
+		}
+
+		const getParam = paramGetter ?? (() => undefined as TParam);
 		// Helpers
 		const loadData = async (
 			queryParam: TParam,
@@ -160,13 +175,14 @@ export function createSequentialQuery<
 
 		// State
 		const internalState = $state({
-			currentKey: generateKey(key, param).join('__')
+			currentKey: generateKey(key, getParam()).join('__')
 		});
 
-		trackActiveQueriesCount(key, param);
+		trackActiveQueriesCount(key, getParam);
 
 		$effect(() => {
 			// Reset state and run the query loader when the queryParam changes
+			const param = getParam();
 			const cacheKey = generateKey(key, param).join('__');
 			const frozenQueryParam = $state.snapshot(param) as TParam;
 
@@ -177,8 +193,6 @@ export function createSequentialQuery<
 				// Create and store the query loader if it doesn't exist
 				if (!queryLoaderByKey[cacheKey]) {
 					const queryLoaderWithParam = async (mode: string) => {
-						const cacheKey = generateKey(key, param).join('__');
-
 						withLoading(
 							cacheKey,
 							() => {
