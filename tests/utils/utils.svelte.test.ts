@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import {
 	serializeParam,
-	generateKey,
+	generateCacheKey,
 	KEY_SEPARATOR
 } from '../../src/lib/svelte-tiny-query/utils';
 
@@ -91,69 +91,78 @@ describe('serializeParam', () => {
 	});
 });
 
-describe('generateKey', () => {
+describe('generateCacheKey', () => {
 	test('returns base key when param is undefined', () => {
-		expect(generateKey(['todos'], undefined)).toEqual(['todos']);
+		expect(generateCacheKey(['todos'], undefined)).toBe('todos');
 	});
 
 	test('returns base key when param is null', () => {
-		expect(generateKey(['todos'], null)).toEqual(['todos']);
+		expect(generateCacheKey(['todos'], null)).toBe('todos');
 	});
 
 	test('appends serialized object param', () => {
-		expect(generateKey(['todos'], { id: 1 })).toEqual(['todos', '{"id":1}']);
+		expect(generateCacheKey(['todos'], { id: 1 })).toBe(
+			['todos', '{"id":1}'].join(KEY_SEPARATOR)
+		);
 	});
 
 	test('appends serialized primitive param (number)', () => {
-		expect(generateKey(['todos'], 5)).toEqual(['todos', '5']);
+		expect(generateCacheKey(['todos'], 5)).toBe(
+			['todos', '5'].join(KEY_SEPARATOR)
+		);
 	});
 
 	test('appends serialized primitive param (string)', () => {
-		expect(generateKey(['todos'], 'abc')).toEqual(['todos', '"abc"']);
+		expect(generateCacheKey(['todos'], 'abc')).toBe(
+			['todos', '"abc"'].join(KEY_SEPARATOR)
+		);
 	});
 
 	test('does NOT drop falsy param 0', () => {
-		expect(generateKey(['todos'], 0)).toEqual(['todos', '0']);
+		expect(generateCacheKey(['todos'], 0)).toBe(
+			['todos', '0'].join(KEY_SEPARATOR)
+		);
 	});
 
 	test('does NOT drop falsy param empty string', () => {
-		expect(generateKey(['todos'], '')).toEqual(['todos', '""']);
+		expect(generateCacheKey(['todos'], '')).toBe(
+			['todos', '""'].join(KEY_SEPARATOR)
+		);
 	});
 
 	test('does NOT drop falsy param false', () => {
-		expect(generateKey(['todos'], false)).toEqual(['todos', 'false']);
+		expect(generateCacheKey(['todos'], false)).toBe(
+			['todos', 'false'].join(KEY_SEPARATOR)
+		);
 	});
 
 	test('works with multi-segment base key', () => {
-		expect(generateKey(['api', 'v2', 'todos'], { id: 1 })).toEqual([
-			'api',
-			'v2',
-			'todos',
-			'{"id":1}'
-		]);
+		expect(generateCacheKey(['api', 'v2', 'todos'], { id: 1 })).toBe(
+			['api', 'v2', 'todos', '{"id":1}'].join(KEY_SEPARATOR)
+		);
 	});
 
 	test('uses dynamic key function', () => {
 		const keyFn = (param: { id: number }) => ['todos', `item-${param.id}`];
-		expect(generateKey(keyFn, { id: 42 })).toEqual(['todos', 'item-42']);
+		expect(generateCacheKey(keyFn, { id: 42 })).toBe(
+			['todos', 'item-42'].join(KEY_SEPARATOR)
+		);
 	});
 
 	test('dynamic key function receives the param', () => {
 		const keyFn = (param: number) => ['page', String(param)];
-		expect(generateKey(keyFn, 3)).toEqual(['page', '3']);
+		expect(generateCacheKey(keyFn, 3)).toBe(['page', '3'].join(KEY_SEPARATOR));
 	});
 
 	test('produces different keys for different params', () => {
-		const key1 = generateKey(['todos'], { id: 1 }).join(KEY_SEPARATOR);
-		const key2 = generateKey(['todos'], { id: 2 }).join(KEY_SEPARATOR);
+		const key1 = generateCacheKey(['todos'], { id: 1 });
+		const key2 = generateCacheKey(['todos'], { id: 2 });
 		expect(key1).not.toBe(key2);
 	});
 
-	test('joined key for "todo" does not collide with "todoList"', () => {
-		const todoKey = generateKey(['todo'], undefined).join(KEY_SEPARATOR);
-		const todoListKey = generateKey(['todoList'], undefined).join(
-			KEY_SEPARATOR
-		);
+	test('key for "todo" does not collide with "todoList"', () => {
+		const todoKey = generateCacheKey(['todo'], undefined);
+		const todoListKey = generateCacheKey(['todoList'], undefined);
 		expect(todoListKey.startsWith(todoKey + KEY_SEPARATOR)).toBe(false);
 		expect(todoKey).not.toBe(todoListKey);
 	});

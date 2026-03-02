@@ -1,8 +1,10 @@
+import type { QueryLoadMode } from './utils.js';
+
 // Non-Reactive State
 
 export const queryLoaderByKey = {} as Record<
 	string,
-	(mode?: string) => Promise<void>
+	(mode?: QueryLoadMode) => Promise<void>
 >;
 
 // Query State

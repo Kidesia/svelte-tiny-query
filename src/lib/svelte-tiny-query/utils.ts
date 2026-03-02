@@ -2,6 +2,10 @@
 // Cannot appear in any reasonable user key string, making split() safe.
 export const KEY_SEPARATOR = '\x1F';
 
+// Types
+
+export type QueryLoadMode = 'more' | 'reload' | 'load';
+
 // Key Helpers
 
 /**
@@ -33,14 +37,27 @@ function deepSortKeys(value: unknown): unknown {
 	return sorted;
 }
 
-export function generateKey<T>(
+/**
+ * Normalizes a param that can be either a direct value or a getter function
+ * into a consistent getter function.
+ */
+export function normalizeParam<TParam>(
+	paramOrGetter?: TParam | (() => TParam)
+): () => TParam {
+	if (paramOrGetter === undefined) return () => undefined as TParam;
+	if (typeof paramOrGetter === 'function') return paramOrGetter as () => TParam;
+	return () => paramOrGetter;
+}
+
+export function generateCacheKey<T>(
 	baseKey: string[] | ((params: T) => string[]),
 	queryParam: T
-) {
+): string {
 	if (typeof baseKey === 'function') {
-		return baseKey(queryParam);
+		return baseKey(queryParam).join(KEY_SEPARATOR);
 	}
 
 	const serialized = serializeParam(queryParam);
-	return serialized ? [...baseKey, serialized] : baseKey;
+	const segments = serialized ? [...baseKey, serialized] : baseKey;
+	return segments.join(KEY_SEPARATOR);
 }

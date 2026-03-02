@@ -8,7 +8,19 @@ import {
 	dataByKey
 } from './cache.svelte';
 import type { LoadResult } from './loadHelpers.js';
-import { generateKey, KEY_SEPARATOR } from './utils.js';
+import { generateCacheKey } from './utils.js';
+
+export function warnIfTracking(fnName: string) {
+	if ($effect.tracking()) {
+		console.warn(
+			`${fnName}: The returned query function was called inside a reactive context ` +
+				'($derived, $effect, .map(), or template expression). ' +
+				'This will cause unexpected behavior. ' +
+				'Call it at the top level of your component instead, and use a getter for reactive params:\n' +
+				'  const query = myQuery(() => param);'
+		);
+	}
+}
 
 export function trackActiveQueriesCount(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,7 +28,7 @@ export function trackActiveQueriesCount(
 	paramGetter: () => unknown
 ) {
 	$effect(() => {
-		const cacheKey = generateKey(key, paramGetter()).join(KEY_SEPARATOR);
+		const cacheKey = generateCacheKey(key, paramGetter());
 
 		untrack(() => {
 			// Increment the active query count for this cache key
@@ -25,15 +37,11 @@ export function trackActiveQueriesCount(
 
 		return () => {
 			// Decrement the active query count when the query is destroyed
-			const newCount = Math.max((activeQueryCounts[cacheKey] ?? 0) - 1, 0);
-			if (newCount <= 0) {
+			const count = (activeQueryCounts[cacheKey] ?? 0) - 1;
+			if (count <= 0) {
 				delete activeQueryCounts[cacheKey];
-				return;
 			} else {
-				activeQueryCounts[cacheKey] = Math.max(
-					(activeQueryCounts[cacheKey] ?? 0) - 1,
-					0
-				);
+				activeQueryCounts[cacheKey] = count;
 			}
 		};
 	});

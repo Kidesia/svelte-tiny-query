@@ -1,8 +1,12 @@
 import { untrack } from 'svelte';
 
 import type { LoadResult } from './loadHelpers.js';
-import { generateKey, KEY_SEPARATOR } from './utils.js';
-import { trackActiveQueriesCount, withLoading } from './queryHelpers.svelte';
+import { generateCacheKey, normalizeParam } from './utils.js';
+import {
+	warnIfTracking,
+	trackActiveQueriesCount,
+	withLoading
+} from './queryHelpers.svelte';
 import {
 	queryLoaderByKey,
 	loadingByKey,
@@ -104,26 +108,13 @@ export function createQuery<TData, TError, TParam = void>(
 	}
 ): (param?: TParam | (() => TParam)) => QueryState<TData | undefined, TError> {
 	return (paramOrGetter?: TParam | (() => TParam)) => {
-		if ($effect.tracking()) {
-			console.warn(
-				'createQuery: The returned query function was called inside a reactive context ' +
-					'($derived, $effect, .map(), or template expression). ' +
-					'This will cause unexpected behavior. ' +
-					'Call it at the top level of your component instead, and use a getter for reactive params:\n' +
-					'  const query = myQuery(() => param);'
-			);
-		}
+		warnIfTracking('createQuery');
 
-		const getParam =
-			paramOrGetter === undefined
-				? () => undefined as TParam
-				: typeof paramOrGetter === 'function'
-					? (paramOrGetter as () => TParam)
-					: () => paramOrGetter;
+		const getParam = normalizeParam(paramOrGetter);
 
 		// Internal state to track the current cache key
 		const internalState = $state({
-			currentKey: generateKey(key, getParam()).join(KEY_SEPARATOR)
+			currentKey: generateCacheKey(key, getParam())
 		});
 
 		// Register the active query (and unregister later)
@@ -132,7 +123,7 @@ export function createQuery<TData, TError, TParam = void>(
 		$effect(() => {
 			// Reset state and run the query loader when key or queryParam changes
 			const param = getParam();
-			const cacheKey = generateKey(key, param).join(KEY_SEPARATOR);
+			const cacheKey = generateCacheKey(key, param);
 			const frozenParam = $state.snapshot(param) as TParam;
 
 			// Set the new cache key in the internal state

@@ -1,6 +1,10 @@
 import { untrack } from 'svelte';
 
-import { generateKey, KEY_SEPARATOR } from './utils.js';
+import {
+	generateCacheKey,
+	normalizeParam,
+	type QueryLoadMode
+} from './utils.js';
 import {
 	queryLoaderByKey,
 	loadingByKey,
@@ -11,7 +15,11 @@ import {
 	cursorByKey,
 	hasMoreByKey
 } from './cache.svelte';
-import { trackActiveQueriesCount, withLoading } from './queryHelpers.svelte';
+import {
+	warnIfTracking,
+	trackActiveQueriesCount,
+	withLoading
+} from './queryHelpers.svelte';
 
 // Types
 
@@ -107,27 +115,14 @@ export function createSequentialQuery<
 	param?: TParam | (() => TParam)
 ) => SequentialQueryState<TData[] | undefined, TError> {
 	return (paramOrGetter?: TParam | (() => TParam)) => {
-		if ($effect.tracking()) {
-			console.warn(
-				'createSequentialQuery: The returned query function was called inside a reactive context ' +
-					'($derived, $effect, .map(), or template expression). ' +
-					'This will cause unexpected behavior. ' +
-					'Call it at the top level of your component instead, and use a getter for reactive params:\n' +
-					'  const query = myQuery(() => param);'
-			);
-		}
+		warnIfTracking('createSequentialQuery');
 
-		const getParam =
-			paramOrGetter === undefined
-				? () => undefined as TParam
-				: typeof paramOrGetter === 'function'
-					? (paramOrGetter as () => TParam)
-					: () => paramOrGetter;
+		const getParam = normalizeParam(paramOrGetter);
 		// Helpers
 		const loadData = async (
 			queryParam: TParam,
 			cacheKey: string,
-			mode: string,
+			mode: QueryLoadMode,
 			currentData: TData[] | undefined = undefined
 		) => {
 			const cursor = cursorByKey[cacheKey] as TCursor | undefined;
@@ -180,7 +175,7 @@ export function createSequentialQuery<
 
 		// State
 		const internalState = $state({
-			currentKey: generateKey(key, getParam()).join(KEY_SEPARATOR)
+			currentKey: generateCacheKey(key, getParam())
 		});
 
 		trackActiveQueriesCount(key, getParam);
@@ -188,7 +183,7 @@ export function createSequentialQuery<
 		$effect(() => {
 			// Reset state and run the query loader when the queryParam changes
 			const param = getParam();
-			const cacheKey = generateKey(key, param).join(KEY_SEPARATOR);
+			const cacheKey = generateCacheKey(key, param);
 			const frozenQueryParam = $state.snapshot(param) as TParam;
 
 			untrack(() => {
@@ -197,7 +192,7 @@ export function createSequentialQuery<
 
 				// Create and store the query loader if it doesn't exist
 				if (!queryLoaderByKey[cacheKey]) {
-					const queryLoaderWithParam = async (mode: string) => {
+					const queryLoaderWithParam = async (mode?: QueryLoadMode) => {
 						withLoading(
 							cacheKey,
 							() => {
@@ -220,7 +215,6 @@ export function createSequentialQuery<
 						);
 					};
 
-					//@ts-expect-error we know that this can have a param
 					queryLoaderByKey[cacheKey] = queryLoaderWithParam;
 				}
 
