@@ -33,10 +33,6 @@
 	});
 
 	$effect(() => {
-		console.log(
-			'Active Queries (in effect):',
-			$state.snapshot(queryInfos.activeQueries)
-		);
 		activeQueries.value = [
 			...untrack(() => activeQueries.value),
 			queryInfos.activeQueries
