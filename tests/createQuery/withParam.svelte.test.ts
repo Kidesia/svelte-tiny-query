@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
 import WithParam from './WithParam.svelte';
+import WithDirectParam from './WithDirectParam.svelte';
 import WithPrimitiveParam from './WithPrimitiveParam.svelte';
 import MultipleWithParams from './MultipleWithParams.svelte';
 
@@ -319,6 +320,33 @@ describe('Normal Query - With Parameter', () => {
 				staleTimeStamp: mockDate.getTime() + 3000
 			}
 		]);
+	});
+
+	test('Reactive $state passed directly (without getter) still triggers re-fetch on mutation', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const states = $state({ value: [] });
+		const rendered = render(WithDirectParam, {
+			props: {
+				states,
+				key: ['direct-param-test'],
+				loadingFn: async (param: { id: number }) => ({
+					success: true,
+					data: `id is ${param.id}`
+				})
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: id is 1')).toBeInTheDocument();
+		});
+
+		// Mutate the $state object — does the query re-fetch?
+		rendered.queryByText('Increment')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: id is 2')).toBeInTheDocument();
+		});
 	});
 
 	test('Rapid param changes show only the final param data (last-value-wins)', async () => {

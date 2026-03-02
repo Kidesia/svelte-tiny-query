@@ -67,7 +67,7 @@ export function createSequentialQuery<
 		initialData: TData[];
 		staleTime?: number;
 	}
-): (paramGetter?: () => TParam) => SequentialQueryState<TData, TError>;
+): (param?: TParam | (() => TParam)) => SequentialQueryState<TData, TError>;
 
 export function createSequentialQuery<
 	TError,
@@ -85,7 +85,7 @@ export function createSequentialQuery<
 		staleTime?: number;
 	}
 ): (
-	paramGetter?: () => TParam
+	param?: TParam | (() => TParam)
 ) => SequentialQueryState<TData[] | undefined, TError>;
 
 export function createSequentialQuery<
@@ -104,9 +104,9 @@ export function createSequentialQuery<
 		staleTime?: number;
 	}
 ): (
-	paramGetter?: () => TParam
+	param?: TParam | (() => TParam)
 ) => SequentialQueryState<TData[] | undefined, TError> {
-	return (paramGetter?: () => TParam) => {
+	return (paramOrGetter?: TParam | (() => TParam)) => {
 		if ($effect.tracking()) {
 			console.warn(
 				'createSequentialQuery: The returned query function was called inside a reactive context ' +
@@ -117,7 +117,12 @@ export function createSequentialQuery<
 			);
 		}
 
-		const getParam = paramGetter ?? (() => undefined as TParam);
+		const getParam =
+			paramOrGetter === undefined
+				? () => undefined as TParam
+				: typeof paramOrGetter === 'function'
+					? (paramOrGetter as () => TParam)
+					: () => paramOrGetter;
 		// Helpers
 		const loadData = async (
 			queryParam: TParam,

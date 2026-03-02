@@ -63,7 +63,7 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 		 */
 		staleTime?: number;
 	}
-): (paramGetter?: () => TParam) => QueryState<TData, TError>;
+): (param?: TParam | (() => TParam)) => QueryState<TData, TError>;
 
 /**
  * Creates a reactive query function for fetching and managing data in Svelte components.
@@ -93,7 +93,7 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 		 */
 		staleTime?: number;
 	}
-): (paramGetter?: () => TParam) => QueryState<TData | undefined, TError>;
+): (param?: TParam | (() => TParam)) => QueryState<TData | undefined, TError>;
 
 export function createQuery<TData, TError, TParam = void>(
 	key: string[] | ((queryParam: TParam) => string[]),
@@ -102,8 +102,8 @@ export function createQuery<TData, TError, TParam = void>(
 		initialData?: TData;
 		staleTime?: number;
 	}
-): (paramGetter?: () => TParam) => QueryState<TData | undefined, TError> {
-	return (paramGetter?: () => TParam) => {
+): (param?: TParam | (() => TParam)) => QueryState<TData | undefined, TError> {
+	return (paramOrGetter?: TParam | (() => TParam)) => {
 		if ($effect.tracking()) {
 			console.warn(
 				'createQuery: The returned query function was called inside a reactive context ' +
@@ -114,7 +114,12 @@ export function createQuery<TData, TError, TParam = void>(
 			);
 		}
 
-		const getParam = paramGetter ?? (() => undefined as TParam);
+		const getParam =
+			paramOrGetter === undefined
+				? () => undefined as TParam
+				: typeof paramOrGetter === 'function'
+					? (paramOrGetter as () => TParam)
+					: () => paramOrGetter;
 
 		// Internal state to track the current cache key
 		const internalState = $state({
