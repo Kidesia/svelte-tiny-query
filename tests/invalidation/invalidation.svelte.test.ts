@@ -1,7 +1,10 @@
 import { describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
-import { invalidateQueries, updateQueryData } from '../../src/lib/svelte-tiny-query/invalidate.svelte';
+import {
+	invalidateQueries,
+	updateQueryData
+} from '../../src/lib/svelte-tiny-query/invalidate.svelte';
 import NoParam from '../createQuery/NoParam.svelte';
 
 describe('invalidateQueries - prefix matching', () => {
@@ -39,7 +42,9 @@ describe('invalidateQueries - prefix matching', () => {
 
 		await waitFor(() => {
 			expect(renderedTodo.queryByText('Data: todo-1')).toBeInTheDocument();
-			expect(renderedTodoList.queryByText('Data: todoList-1')).toBeInTheDocument();
+			expect(
+				renderedTodoList.queryByText('Data: todoList-1')
+			).toBeInTheDocument();
 		});
 
 		vi.advanceTimersByTime(1000);
@@ -51,7 +56,9 @@ describe('invalidateQueries - prefix matching', () => {
 
 		// todoList should NOT have been reloaded
 		expect(todoListCallCount).toBe(1);
-		expect(renderedTodoList.queryByText('Data: todoList-1')).toBeInTheDocument();
+		expect(
+			renderedTodoList.queryByText('Data: todoList-1')
+		).toBeInTheDocument();
 	});
 
 	test('invalidating ["todo"] DOES invalidate ["todo"] with params', async () => {
@@ -95,7 +102,7 @@ describe('invalidateQueries - prefix matching', () => {
 		let parentCallCount = 0;
 		const parentStates = $state({ value: [] });
 
-		// Use a unique key so it won't collide with other tests  
+		// Use a unique key so it won't collide with other tests
 		const rendered = render(NoParam, {
 			props: {
 				states: parentStates,
@@ -148,7 +155,9 @@ describe('updateQueryData', () => {
 		updateQueryData(['update-data-test'], (current) => `${current} + modified`);
 
 		await waitFor(() => {
-			expect(rendered.queryByText('Data: original + modified')).toBeInTheDocument();
+			expect(
+				rendered.queryByText('Data: original + modified')
+			).toBeInTheDocument();
 		});
 	});
 
@@ -179,4 +188,3 @@ describe('updateQueryData', () => {
 		expect(rendered.queryByText('Data: untouched')).toBeInTheDocument();
 	});
 });
-

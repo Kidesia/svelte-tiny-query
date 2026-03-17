@@ -16,4 +16,3 @@
 </script>
 
 <div>Data: {query.data ?? ''}</div>
-

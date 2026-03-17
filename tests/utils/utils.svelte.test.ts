@@ -4,7 +4,7 @@ import {
 	serializeParam,
 	generateCacheKey,
 	KEY_SEPARATOR
-} from '../../src/lib/svelte-tiny-query/utils';
+} from '../../src/lib/svelte-tiny-query/utils.ts';
 
 describe('serializeParam', () => {
 	test('returns empty string for null', () => {

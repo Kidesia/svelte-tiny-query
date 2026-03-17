@@ -126,4 +126,3 @@ describe('Normal Query - Dynamic Key Function', () => {
 		expect(mockLoadingFn).toHaveBeenCalledWith(2);
 	});
 });
-

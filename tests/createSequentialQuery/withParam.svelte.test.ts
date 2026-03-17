@@ -15,7 +15,10 @@ describe('Sequential Query - With Parameter', () => {
 			props: {
 				states,
 				key: ['seq-with-param-test'],
-				loadingFn: async (param: { id: number }, cursor: number | undefined) => {
+				loadingFn: async (
+					param: { id: number },
+					cursor: number | undefined
+				) => {
 					callCount++;
 					if (!cursor) {
 						return {
@@ -35,9 +38,7 @@ describe('Sequential Query - With Parameter', () => {
 
 		// First page loads
 		await waitFor(() => {
-			expect(
-				rendered.queryByText('Data: ["page1-id1"]')
-			).toBeInTheDocument();
+			expect(rendered.queryByText('Data: ["page1-id1"]')).toBeInTheDocument();
 			expect(rendered.queryByText('Has More: Yes')).toBeInTheDocument();
 		});
 
@@ -64,7 +65,10 @@ describe('Sequential Query - With Parameter', () => {
 			props: {
 				states,
 				key: ['seq-param-change-test'],
-				loadingFn: async (param: { id: number }, cursor: number | undefined) => {
+				loadingFn: async (
+					param: { id: number },
+					cursor: number | undefined
+				) => {
 					if (!cursor) {
 						return {
 							success: true,
@@ -83,9 +87,7 @@ describe('Sequential Query - With Parameter', () => {
 
 		// First page loads for id=1
 		await waitFor(() => {
-			expect(
-				rendered.queryByText('Data: ["page1-id1"]')
-			).toBeInTheDocument();
+			expect(rendered.queryByText('Data: ["page1-id1"]')).toBeInTheDocument();
 		});
 
 		// Load second page
@@ -101,9 +103,7 @@ describe('Sequential Query - With Parameter', () => {
 		vi.advanceTimersByTime(1000);
 		rendered.queryByText('Increment')?.click();
 		await waitFor(() => {
-			expect(
-				rendered.queryByText('Data: ["page1-id2"]')
-			).toBeInTheDocument();
+			expect(rendered.queryByText('Data: ["page1-id2"]')).toBeInTheDocument();
 		});
 
 		// Previous pages for id=1 should not appear
@@ -112,4 +112,3 @@ describe('Sequential Query - With Parameter', () => {
 		).not.toBeInTheDocument();
 	});
 });
-

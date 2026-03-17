@@ -40,4 +40,3 @@
 <div>Error: {query.error}</div>
 <div>Data: {query.data ?? ''}</div>
 <div>Loaded at: {query.loadedTimeStamp ? +query.loadedTimeStamp : '-'}</div>
-

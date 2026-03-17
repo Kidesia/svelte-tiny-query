@@ -51,4 +51,3 @@
 	<button onclick={() => (hideState.hide3 = false)}>Show 3</button>
 	<div>Component 3 is hidden</div>
 {/if}
-

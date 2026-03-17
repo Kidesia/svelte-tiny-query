@@ -34,7 +34,7 @@ export function invalidateQueries(
 	// Mark all matching queries as stale
 	Object.keys(staleTimeStampByKey).forEach((key) => {
 		if (matches(key)) {
-			staleTimeStampByKey[key] = +new Date() - 1;
+			staleTimeStampByKey[key] = Date.now() - 1;
 		}
 	});
 

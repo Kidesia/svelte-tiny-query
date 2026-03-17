@@ -51,4 +51,3 @@
 			: 'No'}
 </div>
 <div>Data: {query.data ? JSON.stringify(query.data) : ''}</div>
-

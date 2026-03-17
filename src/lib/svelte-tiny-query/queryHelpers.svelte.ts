@@ -56,7 +56,7 @@ export async function withLoading<TData, TError>(
 	// Check if the query is already loading or still has fresh data
 	const alreadyLoading = loadingByKey[key];
 	const alreadyLoaded = !!loadedTimeStampByKey[key];
-	const staleData = staleTimeStampByKey[key] <= +new Date();
+	const staleData = staleTimeStampByKey[key] <= Date.now();
 	if (!force && (alreadyLoading || (alreadyLoaded && !staleData))) {
 		return;
 	}
@@ -69,8 +69,8 @@ export async function withLoading<TData, TError>(
 	const loadResult = await loadFn();
 	if (loadResult.success) {
 		dataByKey[key] = loadResult.data;
-		loadedTimeStampByKey[key] = +new Date();
-		staleTimeStampByKey[key] = +new Date() + staleTime;
+		loadedTimeStampByKey[key] = Date.now();
+		staleTimeStampByKey[key] = Date.now() + staleTime;
 	} else {
 		errorByKey[key] = loadResult.error;
 	}
