@@ -89,6 +89,56 @@ describe('serializeParam', () => {
 	test('distinguishes null from string "null"', () => {
 		expect(serializeParam(null)).not.toBe(serializeParam('null'));
 	});
+
+	test('serializes Date without collision', () => {
+		const date = new Date('2025-01-15T10:30:00.000Z');
+		const result = serializeParam(date);
+		expect(result).toBe('Date:2025-01-15T10:30:00.000Z');
+		// Must not collide with empty object
+		expect(result).not.toBe(serializeParam({}));
+	});
+
+	test('distinguishes different Dates', () => {
+		const a = serializeParam(new Date('2025-01-01'));
+		const b = serializeParam(new Date('2025-06-01'));
+		expect(a).not.toBe(b);
+	});
+
+	test('serializes BigInt without throwing', () => {
+		const result = serializeParam(BigInt(123));
+		expect(result).toBe('123n');
+	});
+
+	test('distinguishes BigInt from number', () => {
+		expect(serializeParam(BigInt(42))).not.toBe(serializeParam(42));
+	});
+
+	test('serializes Symbol without returning undefined', () => {
+		const result = serializeParam(Symbol('myKey'));
+		expect(result).toBe('@@myKey');
+		expect(result).not.toBe('');
+	});
+
+	test('serializes Symbol without description', () => {
+		const result = serializeParam(Symbol());
+		expect(result).toBe('@@');
+	});
+
+	test('serializes RegExp', () => {
+		const result = serializeParam(/test/gi);
+		expect(result).toBe('RegExp:/test/gi');
+	});
+
+	test('serializes object containing a Date value', () => {
+		const date = new Date('2025-01-15T10:30:00.000Z');
+		const result = serializeParam({ createdAt: date, id: 1 });
+		expect(result).toBe('{"createdAt":"Date:2025-01-15T10:30:00.000Z","id":1}');
+	});
+
+	test('serializes object containing a BigInt value', () => {
+		const result = serializeParam({ amount: BigInt(999) });
+		expect(result).toBe('{"amount":"999n"}');
+	});
 });
 
 describe('generateCacheKey', () => {

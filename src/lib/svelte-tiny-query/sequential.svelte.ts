@@ -3,7 +3,8 @@ import { untrack } from 'svelte';
 import {
 	generateCacheKey,
 	normalizeParam,
-	type QueryLoadMode
+	type QueryLoadMode,
+	type QueryParam
 } from './utils.js';
 import {
 	queryLoaderByKey,
@@ -62,7 +63,7 @@ export type SequentialLoadResult<TData, TCursor, TError> =
 
 export function createSequentialQuery<
 	TError,
-	TParam = void,
+	TParam extends QueryParam = void,
 	TData = unknown,
 	TCursor = unknown
 >(
@@ -79,7 +80,7 @@ export function createSequentialQuery<
 
 export function createSequentialQuery<
 	TError,
-	TParam = void,
+	TParam extends QueryParam = void,
 	TData = unknown,
 	TCursor = unknown
 >(
@@ -99,7 +100,7 @@ export function createSequentialQuery<
 export function createSequentialQuery<
 	TData,
 	TError,
-	TParam = void,
+	TParam extends QueryParam = void,
 	TCursor = unknown
 >(
 	key: string[] | ((queryParam: TParam) => string[]),

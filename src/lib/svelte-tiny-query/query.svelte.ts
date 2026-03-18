@@ -1,7 +1,7 @@
 import { untrack } from 'svelte';
 
 import type { LoadResult } from './loadHelpers.js';
-import { generateCacheKey, normalizeParam } from './utils.js';
+import { generateCacheKey, normalizeParam, type QueryParam } from './utils.js';
 import {
 	warnIfTracking,
 	trackActiveQueriesCount,
@@ -52,7 +52,11 @@ export type QueryState<TData, TError> = {
  *
  * @returns A function returning the reactive query state.
  */
-export function createQuery<TError, TParam = void, TData = unknown>(
+export function createQuery<
+	TError,
+	TParam extends QueryParam = void,
+	TData = unknown
+>(
 	key: string[] | ((queryParam: TParam) => string[]),
 	loadFn: (queryParam: TParam) => Promise<LoadResult<TData, TError>>,
 	options: {
@@ -82,7 +86,11 @@ export function createQuery<TError, TParam = void, TData = unknown>(
  *
  * @returns A function that accepts an optional param getter and returns the reactive query state.
  */
-export function createQuery<TError, TParam = void, TData = unknown>(
+export function createQuery<
+	TError,
+	TParam extends QueryParam = void,
+	TData = unknown
+>(
 	key: string[] | ((queryParam: TParam) => string[]),
 	loadFn: (queryParam: TParam) => Promise<LoadResult<TData, TError>>,
 	options?: {
@@ -99,7 +107,7 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 	}
 ): (param?: TParam | (() => TParam)) => QueryState<TData | undefined, TError>;
 
-export function createQuery<TData, TError, TParam = void>(
+export function createQuery<TData, TError, TParam extends QueryParam = void>(
 	key: string[] | ((queryParam: TParam) => string[]),
 	loadFn: (queryParam: TParam) => Promise<LoadResult<TData, TError>>,
 	options?: {

@@ -5,6 +5,7 @@ import {
 } from './svelte-tiny-query/cache.svelte';
 import { KEY_SEPARATOR } from './svelte-tiny-query/utils.js';
 
+export type { QueryParam } from './svelte-tiny-query/utils.js';
 export * from './svelte-tiny-query/query.svelte';
 export * from './svelte-tiny-query/sequential.svelte';
 export * from './svelte-tiny-query/invalidate.svelte';
