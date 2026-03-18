@@ -45,7 +45,8 @@ describe('Normal Query - Primitive Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// Loaded param=1
 			{
@@ -53,7 +54,8 @@ describe('Normal Query - Primitive Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Switching to param=2
 			{
@@ -61,7 +63,8 @@ describe('Normal Query - Primitive Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// Loaded param=2
 			{
@@ -69,7 +72,8 @@ describe('Normal Query - Primitive Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: mockDate.getTime() + 1000,
+				enabled: true
 			},
 			// Switching back to param=1 (cached)
 			{
@@ -77,7 +81,8 @@ describe('Normal Query - Primitive Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Reloaded param=1
 			{
@@ -85,7 +90,8 @@ describe('Normal Query - Primitive Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 2000,
-				staleTimeStamp: mockDate.getTime() + 2000
+				staleTimeStamp: mockDate.getTime() + 2000,
+				enabled: true
 			}
 		]);
 	});

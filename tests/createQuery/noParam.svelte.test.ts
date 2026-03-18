@@ -7,6 +7,7 @@ import NoParam from './NoParam.svelte';
 import MultipleNoParam from './MultipleNoParam.svelte';
 import TripleNoParam from './TripleNoParam.svelte';
 import MisusedInDerived from './MisusedInDerived.svelte';
+import WithEnabled from './WithEnabled.svelte';
 
 describe('Normal Query - No Parameter', () => {
 	test('Loads data', async () => {
@@ -34,7 +35,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -42,7 +44,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			}
 		]);
 	});
@@ -72,7 +75,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -80,7 +84,8 @@ describe('Normal Query - No Parameter', () => {
 				error: 'oopsie',
 				loading: false,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			}
 		]);
 	});
@@ -120,7 +125,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -128,7 +134,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Reloading
 			{
@@ -136,7 +143,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// After reload
 			{
@@ -144,7 +152,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: mockDate.getTime() + 1000,
+				enabled: true
 			}
 		]);
 	});
@@ -190,7 +199,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -198,7 +208,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Refetching
 			{
@@ -206,7 +217,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// After error (still has previous data)
 			{
@@ -214,7 +226,8 @@ describe('Normal Query - No Parameter', () => {
 				error: 'oopsie',
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			}
 		]);
 	});
@@ -247,7 +260,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -255,7 +269,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			}
 		]);
 	});
@@ -308,7 +323,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: true,
 					loadedTimeStamp: undefined,
-					staleTimeStamp: undefined
+					staleTimeStamp: undefined,
+					enabled: true
 				},
 				// After loading
 				{
@@ -316,7 +332,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: false,
 					loadedTimeStamp: mockDate.getTime(),
-					staleTimeStamp: mockDate.getTime()
+					staleTimeStamp: mockDate.getTime(),
+					enabled: true
 				},
 				// Hiding (nothing happens)
 				// Showing again (reloads data)
@@ -325,7 +342,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: true,
 					loadedTimeStamp: mockDate.getTime(),
-					staleTimeStamp: mockDate.getTime()
+					staleTimeStamp: mockDate.getTime(),
+					enabled: true
 				},
 				// After reload
 				{
@@ -333,7 +351,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: false,
 					loadedTimeStamp: mockDate.getTime() + 2000,
-					staleTimeStamp: mockDate.getTime() + 2000
+					staleTimeStamp: mockDate.getTime() + 2000,
+					enabled: true
 				}
 			]);
 		});
@@ -404,7 +423,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -412,7 +432,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			},
 			// Hiding (nothing happens)
 			// Showing again (not stale, no reload, but old data is newly initialized)
@@ -421,7 +442,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			},
 			// Hiding again (nothing happens)
 			// Showing again (now stale, reloads data)
@@ -430,7 +452,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			},
 			// After reload
 			{
@@ -438,7 +461,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 4000,
-				staleTimeStamp: mockDate.getTime() + 7000
+				staleTimeStamp: mockDate.getTime() + 7000,
+				enabled: true
 			}
 		]);
 
@@ -449,7 +473,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -457,7 +482,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			},
 			// Hiding (nothing happens)
 			// Showing again (not stale, no reload, no need to newly initialize)
@@ -468,7 +494,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			},
 			// After reload
 			{
@@ -476,7 +503,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 4000,
-				staleTimeStamp: mockDate.getTime() + 7000
+				staleTimeStamp: mockDate.getTime() + 7000,
+				enabled: true
 			}
 		]);
 	});
@@ -537,7 +565,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: true,
 					loadedTimeStamp: undefined,
-					staleTimeStamp: undefined
+					staleTimeStamp: undefined,
+					enabled: true
 				},
 				// After loading
 				{
@@ -545,7 +574,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: false,
 					loadedTimeStamp: mockDate.getTime(),
-					staleTimeStamp: mockDate.getTime()
+					staleTimeStamp: mockDate.getTime(),
+					enabled: true
 				},
 				// Reloading
 				{
@@ -553,7 +583,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: true,
 					loadedTimeStamp: mockDate.getTime(),
-					staleTimeStamp: mockDate.getTime()
+					staleTimeStamp: mockDate.getTime(),
+					enabled: true
 				},
 				// After reload
 				{
@@ -561,7 +592,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: false,
 					loadedTimeStamp: mockDate.getTime() + 1000,
-					staleTimeStamp: mockDate.getTime() + 1000
+					staleTimeStamp: mockDate.getTime() + 1000,
+					enabled: true
 				}
 			]);
 		});
@@ -609,7 +641,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -617,7 +650,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Invalidating (reloads data)
 			{
@@ -626,7 +660,8 @@ describe('Normal Query - No Parameter', () => {
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
 				// invalidating sets the stale time to now - 1
-				staleTimeStamp: mockDate.getTime() + 1000 - 1
+				staleTimeStamp: mockDate.getTime() + 1000 - 1,
+				enabled: true
 			},
 			// After reload
 			{
@@ -634,7 +669,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: mockDate.getTime() + 1000,
+				enabled: true
 			}
 		]);
 	});
@@ -681,7 +717,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -689,7 +726,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Force-invalidating (resets and reloads data)
 			{
@@ -698,7 +736,8 @@ describe('Normal Query - No Parameter', () => {
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
 				// invalidating sets the stale time to now - 1
-				staleTimeStamp: mockDate.getTime() + 1000 - 1
+				staleTimeStamp: mockDate.getTime() + 1000 - 1,
+				enabled: true
 			},
 			// After reload
 			{
@@ -706,7 +745,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: mockDate.getTime() + 1000,
+				enabled: true
 			}
 		]);
 	});
@@ -749,7 +789,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After error
 			{
@@ -757,7 +798,8 @@ describe('Normal Query - No Parameter', () => {
 				error: 'failed',
 				loading: false,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// Reloading (error is cleared when reload starts)
 			{
@@ -765,7 +807,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After recovery
 			{
@@ -773,7 +816,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: mockDate.getTime() + 1000,
+				enabled: true
 			}
 		]);
 	});
@@ -892,5 +936,177 @@ describe('Normal Query - No Parameter', () => {
 		});
 
 		warnSpy.mockRestore();
+	});
+});
+
+describe('Normal Query - Enabled Option', () => {
+	test('Does not load when enabled is initially false', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const mockLoadingFn = vi.fn(async () => ({
+			success: true as const,
+			data: 'payload'
+		}));
+
+		const states = $state({ value: [] });
+		const rendered = render(WithEnabled, {
+			props: {
+				states,
+				key: ['enabled-false-test'],
+				loadingFn: mockLoadingFn,
+				initialEnabled: false
+			}
+		});
+
+		// Wait a tick to let effects settle
+		await vi.advanceTimersByTimeAsync(100);
+
+		expect(mockLoadingFn).not.toHaveBeenCalled();
+		expect(states.value).toEqual([
+			{
+				data: undefined,
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
+				enabled: false
+			}
+		]);
+
+		rendered.unmount();
+		vi.useRealTimers();
+	});
+
+	test('Starts loading when enabled flips from false to true', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const mockLoadingFn = vi.fn(async () => ({
+			success: true as const,
+			data: 'payload'
+		}));
+
+		const states = $state({ value: [] });
+		const rendered = render(WithEnabled, {
+			props: {
+				states,
+				key: ['enabled-toggle-test'],
+				loadingFn: mockLoadingFn,
+				initialEnabled: false
+			}
+		});
+
+		await vi.advanceTimersByTimeAsync(100);
+		expect(mockLoadingFn).not.toHaveBeenCalled();
+
+		// Toggle enabled to true
+		rendered.queryByText('Toggle Enabled')?.click();
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: payload')).toBeInTheDocument();
+		});
+
+		expect(mockLoadingFn).toHaveBeenCalledTimes(1);
+
+		expect(states.value).toEqual([
+			// Initially disabled
+			{
+				data: undefined,
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
+				enabled: false
+			},
+			// After enabling — loading starts
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
+				enabled: true
+			},
+			// After loading completes
+			{
+				data: 'payload',
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 100,
+				staleTimeStamp: mockDate.getTime() + 100,
+				enabled: true
+			}
+		]);
+
+		rendered.unmount();
+		vi.useRealTimers();
+	});
+
+	test('Enabled state is reactive on the returned query object', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const states = $state({ value: [] });
+		const rendered = render(WithEnabled, {
+			props: {
+				states,
+				key: ['enabled-reactive-test'],
+				loadingFn: async () => ({ success: true, data: 'data' }),
+				initialEnabled: false
+			}
+		});
+
+		await vi.advanceTimersByTimeAsync(100);
+
+		// Check that enabled: false is reflected in the DOM
+		expect(rendered.queryByText('Enabled: false')).toBeInTheDocument();
+
+		// Toggle enabled
+		rendered.queryByText('Toggle Enabled')?.click();
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Enabled: true')).toBeInTheDocument();
+		});
+
+		rendered.unmount();
+		vi.useRealTimers();
+	});
+
+	test('Reload does nothing while disabled', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const mockLoadingFn = vi.fn(async () => ({
+			success: true as const,
+			data: 'payload'
+		}));
+
+		const states = $state({ value: [] });
+		const rendered = render(WithEnabled, {
+			props: {
+				states,
+				key: ['enabled-reload-test'],
+				loadingFn: mockLoadingFn,
+				initialEnabled: false
+			}
+		});
+
+		await vi.advanceTimersByTimeAsync(100);
+		expect(mockLoadingFn).not.toHaveBeenCalled();
+
+		// Try to reload while disabled
+		rendered.queryByText('Reload')?.click();
+		await vi.advanceTimersByTimeAsync(100);
+
+		// loadingFn should still not have been called
+		expect(mockLoadingFn).not.toHaveBeenCalled();
+
+		rendered.unmount();
+		vi.useRealTimers();
 	});
 });

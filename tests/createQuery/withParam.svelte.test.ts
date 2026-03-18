@@ -52,7 +52,8 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// Finished loading id 1
 			{
@@ -60,7 +61,8 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Incrementing to id 2
 			{
@@ -68,7 +70,8 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// Finished loading id 2
 			{
@@ -76,7 +79,8 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: mockDate.getTime() + 1000,
+				enabled: true
 			},
 			// Decrementing back to id 1 (has data in cache)
 			{
@@ -84,7 +88,8 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Finished loading id 1 again
 			{
@@ -92,7 +97,8 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 2000,
-				staleTimeStamp: mockDate.getTime() + 2000
+				staleTimeStamp: mockDate.getTime() + 2000,
+				enabled: true
 			}
 		]);
 	});
@@ -156,14 +162,16 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			{
 				data: 'id is 1',
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: expectedStaleTime
+				staleTimeStamp: expectedStaleTime,
+				enabled: true
 			},
 			// incrementing to id 2
 			{
@@ -171,14 +179,16 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			{
 				data: 'id is 2',
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: expectedStaleTime + 1000
+				staleTimeStamp: expectedStaleTime + 1000,
+				enabled: true
 			},
 			// decrementing back to id 1 (not stale yet)
 			{
@@ -186,7 +196,8 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: expectedStaleTime
+				staleTimeStamp: expectedStaleTime,
+				enabled: true
 			},
 			// incrementing to id 2 (not stale yet)
 			{
@@ -194,7 +205,8 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: expectedStaleTime + 1000
+				staleTimeStamp: expectedStaleTime + 1000,
+				enabled: true
 			},
 			// decrementing back to id 1 (now stale!)
 			{
@@ -202,14 +214,16 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: expectedStaleTime
+				staleTimeStamp: expectedStaleTime,
+				enabled: true
 			},
 			{
 				data: 'id is 1',
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 4000,
-				staleTimeStamp: expectedStaleTime + 4000
+				staleTimeStamp: expectedStaleTime + 4000,
+				enabled: true
 			}
 		]);
 	});
@@ -269,14 +283,16 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			{
 				data: 'id is 1',
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 2000
+				staleTimeStamp: mockDate.getTime() + 2000,
+				enabled: true
 			},
 			// incrementing to id 2
 			{
@@ -284,14 +300,16 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			{
 				data: 'id is 2',
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			}
 		]);
 
@@ -302,14 +320,16 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			{
 				data: 'id is 1',
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 2000
+				staleTimeStamp: mockDate.getTime() + 2000,
+				enabled: true
 			},
 			// incrementing to id 2 (from cache)
 			{
@@ -317,7 +337,8 @@ describe('Normal Query - With Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			}
 		]);
 	});
