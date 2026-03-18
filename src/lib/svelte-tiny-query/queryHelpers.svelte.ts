@@ -10,10 +10,10 @@ import {
 import type { LoadResult } from './loadHelpers.js';
 import { generateCacheKey } from './utils.js';
 
-export function warnIfTracking(fnName: string) {
+export function warnIfTracking(fnName: string, key: string) {
 	if ($effect.tracking()) {
 		console.warn(
-			`${fnName}: The returned query function was called inside a reactive context ` +
+			`${fnName} (${key}): The returned query function was called inside a reactive context ` +
 				'($derived, $effect, .map(), or template expression). ' +
 				'This will cause unexpected behavior. ' +
 				'Call it at the top level of your component instead, and use a getter for reactive params:\n' +

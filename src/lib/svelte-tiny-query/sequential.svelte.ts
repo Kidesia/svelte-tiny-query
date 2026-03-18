@@ -116,9 +116,8 @@ export function createSequentialQuery<
 	param?: TParam | (() => TParam)
 ) => SequentialQueryState<TData[] | undefined, TError> {
 	return (paramOrGetter?: TParam | (() => TParam)) => {
-		warnIfTracking('createSequentialQuery');
-
 		const getParam = normalizeParam(paramOrGetter);
+
 		// Helpers
 		const loadData = async (
 			queryParam: TParam,
@@ -175,9 +174,12 @@ export function createSequentialQuery<
 		};
 
 		// State
+
 		const internalState = $state({
 			currentKey: generateCacheKey(key, getParam())
 		});
+
+		warnIfTracking('createSequentialQuery', internalState.currentKey);
 
 		trackActiveQueriesCount(key, getParam);
 

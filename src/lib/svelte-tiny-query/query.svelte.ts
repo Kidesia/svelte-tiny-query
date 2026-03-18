@@ -116,14 +116,14 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 	}
 ): (param?: TParam | (() => TParam)) => QueryState<TData | undefined, TError> {
 	return (paramOrGetter?: TParam | (() => TParam)) => {
-		warnIfTracking('createQuery');
-
 		const getParam = normalizeParam(paramOrGetter);
 
 		// Internal state to track the current cache key
 		const internalState = $state({
 			currentKey: generateCacheKey(key, getParam())
 		});
+
+		warnIfTracking('createQuery', internalState.currentKey);
 
 		// Register the active query (and unregister later)
 		trackActiveQueriesCount(key, getParam);
