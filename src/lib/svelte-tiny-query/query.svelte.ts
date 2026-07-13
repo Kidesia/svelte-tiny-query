@@ -80,8 +80,9 @@ export function createQuery<
 		staleTime?: number;
 		/**
 		 * Time in milliseconds after which the cached state of the query is
-		 * evicted, once the query is no longer used in any mounted component.
-		 * If not set, cached data is kept for the lifetime of the app.
+		 * evicted, once the query is unused in any mounted component AND its
+		 * data is stale. Fresh data is never evicted (with staleTime Infinity,
+		 * the cache is kept forever). If not set, cached data is never evicted.
 		 */
 		gcTime?: number;
 	}
@@ -123,8 +124,9 @@ export function createQuery<
 		staleTime?: number;
 		/**
 		 * Time in milliseconds after which the cached state of the query is
-		 * evicted, once the query is no longer used in any mounted component.
-		 * If not set, cached data is kept for the lifetime of the app.
+		 * evicted, once the query is unused in any mounted component AND its
+		 * data is stale. Fresh data is never evicted (with staleTime Infinity,
+		 * the cache is kept forever). If not set, cached data is never evicted.
 		 */
 		gcTime?: number;
 	}

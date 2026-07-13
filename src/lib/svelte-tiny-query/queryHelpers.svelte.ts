@@ -51,8 +51,8 @@ export function trackActiveQueriesCount(
 			const count = (activeQueryCounts[cacheKey] ?? 0) - 1;
 			if (count <= 0) {
 				delete activeQueryCounts[cacheKey];
-				if (gcTime !== undefined && gcTime !== Infinity) {
-					scheduleEviction(cacheKey, gcTime);
+				if (gcTime !== undefined) {
+					scheduleEviction(cacheKey, gcTime, gcTime);
 				}
 			} else {
 				activeQueryCounts[cacheKey] = count;
@@ -61,25 +61,54 @@ export function trackActiveQueriesCount(
 	});
 }
 
-function scheduleEviction(cacheKey: string, gcTime: number) {
+// setTimeout treats delays above 2^31 - 1 as 0, so cap reschedules to
+// this and re-check when the timer fires
+const MAX_TIMEOUT_DELAY = 2 ** 31 - 1;
+
+function scheduleEviction(cacheKey: string, gcTime: number, delay: number) {
 	clearTimeout(evictionTimerByKey[cacheKey]);
-	evictionTimerByKey[cacheKey] = setTimeout(() => {
-		delete evictionTimerByKey[cacheKey];
+	delete evictionTimerByKey[cacheKey];
 
-		// Skip eviction if the query became active again or is loading
-		if (activeQueryCounts[cacheKey] || loadingByKey[cacheKey]) {
-			return;
-		}
+	// An infinite delay (gcTime or staleTime of Infinity) means the
+	// query is never evicted
+	if (!Number.isFinite(delay)) return;
 
-		delete queryLoaderByKey[cacheKey];
-		delete loadingByKey[cacheKey];
-		delete dataByKey[cacheKey];
-		delete errorByKey[cacheKey];
-		delete loadedTimeStampByKey[cacheKey];
-		delete staleTimeStampByKey[cacheKey];
-		delete cursorByKey[cacheKey];
-		delete hasMoreByKey[cacheKey];
-	}, gcTime);
+	evictionTimerByKey[cacheKey] = setTimeout(
+		() => evictIfUnusedAndStale(cacheKey, gcTime),
+		Math.min(delay, MAX_TIMEOUT_DELAY)
+	);
+}
+
+function evictIfUnusedAndStale(cacheKey: string, gcTime: number) {
+	delete evictionTimerByKey[cacheKey];
+
+	// The query became active again in the meantime
+	if (activeQueryCounts[cacheKey]) return;
+
+	// Wait for an in-flight load to finish before deciding
+	if (loadingByKey[cacheKey]) {
+		scheduleEviction(cacheKey, gcTime, gcTime);
+		return;
+	}
+
+	// A query is evicted gcTime after it is both unused and stale, so
+	// fresh data is never collected. A query without a stale timestamp
+	// (it only ever produced an error) counts as stale.
+	const staleTimeStamp = staleTimeStampByKey[cacheKey] ?? 0;
+	const remaining = staleTimeStamp + gcTime - Date.now();
+	if (remaining > 0) {
+		scheduleEviction(cacheKey, gcTime, remaining);
+		return;
+	}
+
+	delete queryLoaderByKey[cacheKey];
+	delete loadingByKey[cacheKey];
+	delete dataByKey[cacheKey];
+	delete errorByKey[cacheKey];
+	delete loadedTimeStampByKey[cacheKey];
+	delete staleTimeStampByKey[cacheKey];
+	delete cursorByKey[cacheKey];
+	delete hasMoreByKey[cacheKey];
 }
 
 export async function withLoading<TData, TError>(

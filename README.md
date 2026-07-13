@@ -149,7 +149,7 @@ You can use the helpers `succeed(data)` and `fail(error)` to construct these val
 
 - **initialData**: Used as the value of `data` before the query has first loaded (instead of `undefined`). When provided, the type of `query.data` is narrowed from `TData | undefined` to `TData`. Can be used to implement persisted queries.
 
-- **gcTime**: How long (in milliseconds) the cached state of the query is kept once the query is no longer used in any mounted component. When the time elapses, the cache for that key is evicted completely; using the query again cancels a pending eviction. If not set, cached data is kept for the lifetime of the app.
+- **gcTime**: Enables garbage collection for the query: its cached state is evicted `gcTime` milliseconds after the query is both **unused** (not part of any mounted component) and **stale**. Fresh data is never collected — with `staleTime: Infinity`, the cache is kept forever, so set that deliberately. Using the query again cancels a pending eviction. If `gcTime` is not set, cached data is kept for the lifetime of the app. You rarely need this — set it on queries whose parameter space is unbounded (search input, per-item detail views), where distinct cache keys accumulate over a session.
 
 #### Return: The Query Function
 
