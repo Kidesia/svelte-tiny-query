@@ -3,6 +3,7 @@ import {
 	loadingByKey,
 	dataByKey,
 	errorByKey,
+	loadedTimeStampByKey,
 	staleTimeStampByKey,
 	activeQueryCounts,
 	hasMoreByKey,
@@ -38,16 +39,25 @@ export function invalidateQueries(
 		}
 	});
 
-	// Reset the cache data of the matching queries if forced
+	// Forget all cached state of the matching queries if forced. Each record
+	// is cleared separately, so that queries which only ever produced an
+	// error (and thus have no data entry) are also fully reset.
 	if (options?.force) {
-		Object.keys(dataByKey).forEach((key) => {
-			if (matches(key)) {
-				delete loadingByKey[key];
-				delete dataByKey[key];
-				delete errorByKey[key];
-				delete hasMoreByKey[key];
-				delete cursorByKey[key];
-			}
+		const records = [
+			loadingByKey,
+			dataByKey,
+			errorByKey,
+			loadedTimeStampByKey,
+			staleTimeStampByKey,
+			hasMoreByKey,
+			cursorByKey
+		];
+		records.forEach((record) => {
+			Object.keys(record).forEach((key) => {
+				if (matches(key)) {
+					delete record[key];
+				}
+			});
 		});
 	}
 

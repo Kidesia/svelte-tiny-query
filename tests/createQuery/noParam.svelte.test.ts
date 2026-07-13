@@ -772,14 +772,13 @@ describe('Normal Query - No Parameter', () => {
 				staleTimeStamp: mockDate.getTime(),
 				enabled: true
 			},
-			// Force-invalidating (resets and reloads data)
+			// Force-invalidating (forgets all cached state and reloads)
 			{
 				data: undefined,
 				error: undefined,
 				loading: true,
-				loadedTimeStamp: mockDate.getTime(),
-				// invalidating sets the stale time to now - 1
-				staleTimeStamp: mockDate.getTime() + 1000 - 1,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
 				enabled: true
 			},
 			// After reload

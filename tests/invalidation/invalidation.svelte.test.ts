@@ -5,6 +5,10 @@ import {
 	invalidateQueries,
 	updateQueryData
 } from '../../src/lib/svelte-tiny-query/invalidate.svelte';
+import {
+	errorByKey,
+	loadingByKey
+} from '../../src/lib/svelte-tiny-query/cache.svelte';
 import NoParam from '../createQuery/NoParam.svelte';
 
 describe('invalidateQueries - prefix matching', () => {
@@ -127,6 +131,40 @@ describe('invalidateQueries - prefix matching', () => {
 		});
 
 		expect(parentCallCount).toBe(2);
+	});
+});
+
+describe('invalidateQueries - force', () => {
+	test('clears the cached error of a query that never had data', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['force-error-clear-test'],
+				loadingFn: async () => ({ success: false, error: 'oopsie' })
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Error: oopsie')).toBeInTheDocument();
+		});
+
+		expect(errorByKey['force-error-clear-test']).toBe('oopsie');
+		expect(loadingByKey['force-error-clear-test']).toBe(false);
+
+		// Unmount, so that force-invalidation does not trigger a reload
+		// (which would reset the error anyway)
+		rendered.unmount();
+
+		invalidateQueries(['force-error-clear-test'], { force: true });
+
+		// The error and loading entries are gone, even though the query
+		// never had any data cached
+		expect(errorByKey['force-error-clear-test']).toBeUndefined();
+		expect(loadingByKey['force-error-clear-test']).toBeUndefined();
 	});
 });
 
