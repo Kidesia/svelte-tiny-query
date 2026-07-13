@@ -78,6 +78,12 @@ export function createQuery<
 		 * A stale query will be automatically re-fetched when accessed.
 		 */
 		staleTime?: number;
+		/**
+		 * Time in milliseconds after which the cached state of the query is
+		 * evicted, once the query is no longer used in any mounted component.
+		 * If not set, cached data is kept for the lifetime of the app.
+		 */
+		gcTime?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -115,6 +121,12 @@ export function createQuery<
 		 * A stale query will be automatically re-fetched when accessed.
 		 */
 		staleTime?: number;
+		/**
+		 * Time in milliseconds after which the cached state of the query is
+		 * evicted, once the query is no longer used in any mounted component.
+		 * If not set, cached data is kept for the lifetime of the app.
+		 */
+		gcTime?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -127,6 +139,7 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 	options?: {
 		initialData?: TData;
 		staleTime?: number;
+		gcTime?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -147,7 +160,7 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 		warnIfTracking('createQuery', internalState.currentKey);
 
 		// Register the active query (and unregister later)
-		trackActiveQueriesCount(key, getParam);
+		trackActiveQueriesCount(key, getParam, options?.gcTime);
 
 		$effect(() => {
 			// Track enabled reactively — if disabled, skip loading

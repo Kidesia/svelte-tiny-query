@@ -5,7 +5,11 @@ import {
 	errorByKey,
 	loadedTimeStampByKey,
 	staleTimeStampByKey,
-	dataByKey
+	dataByKey,
+	queryLoaderByKey,
+	evictionTimerByKey,
+	cursorByKey,
+	hasMoreByKey
 } from './cache.svelte';
 import type { LoadResult } from './loadHelpers.js';
 import { generateCacheKey } from './utils.js';
@@ -25,12 +29,19 @@ export function warnIfTracking(fnName: string, key: string) {
 export function trackActiveQueriesCount(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	key: string[] | ((p: any) => string[]),
-	paramGetter: () => unknown
+	paramGetter: () => unknown,
+	gcTime?: number
 ) {
 	$effect(() => {
 		const cacheKey = generateCacheKey(key, paramGetter());
 
 		untrack(() => {
+			// Cancel a pending eviction when the query becomes active again
+			if (cacheKey in evictionTimerByKey) {
+				clearTimeout(evictionTimerByKey[cacheKey]);
+				delete evictionTimerByKey[cacheKey];
+			}
+
 			// Increment the active query count for this cache key
 			activeQueryCounts[cacheKey] = (activeQueryCounts[cacheKey] ?? 0) + 1;
 		});
@@ -40,11 +51,35 @@ export function trackActiveQueriesCount(
 			const count = (activeQueryCounts[cacheKey] ?? 0) - 1;
 			if (count <= 0) {
 				delete activeQueryCounts[cacheKey];
+				if (gcTime !== undefined && gcTime !== Infinity) {
+					scheduleEviction(cacheKey, gcTime);
+				}
 			} else {
 				activeQueryCounts[cacheKey] = count;
 			}
 		};
 	});
+}
+
+function scheduleEviction(cacheKey: string, gcTime: number) {
+	clearTimeout(evictionTimerByKey[cacheKey]);
+	evictionTimerByKey[cacheKey] = setTimeout(() => {
+		delete evictionTimerByKey[cacheKey];
+
+		// Skip eviction if the query became active again or is loading
+		if (activeQueryCounts[cacheKey] || loadingByKey[cacheKey]) {
+			return;
+		}
+
+		delete queryLoaderByKey[cacheKey];
+		delete loadingByKey[cacheKey];
+		delete dataByKey[cacheKey];
+		delete errorByKey[cacheKey];
+		delete loadedTimeStampByKey[cacheKey];
+		delete staleTimeStampByKey[cacheKey];
+		delete cursorByKey[cacheKey];
+		delete hasMoreByKey[cacheKey];
+	}, gcTime);
 }
 
 export async function withLoading<TData, TError>(

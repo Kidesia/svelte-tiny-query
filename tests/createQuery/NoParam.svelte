@@ -17,6 +17,7 @@
 		queryOptions?: {
 			staleTime?: number;
 			initialData?: unknown;
+			gcTime?: number;
 		};
 	} = $props();
 

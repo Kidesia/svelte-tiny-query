@@ -78,6 +78,7 @@ export function createSequentialQuery<
 	options: {
 		initialData: TData[];
 		staleTime?: number;
+		gcTime?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -98,6 +99,7 @@ export function createSequentialQuery<
 	options?: {
 		initialData?: TData[];
 		staleTime?: number;
+		gcTime?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -118,6 +120,7 @@ export function createSequentialQuery<
 	options?: {
 		initialData?: TData[];
 		staleTime?: number;
+		gcTime?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -158,7 +161,7 @@ export function createSequentialQuery<
 
 		warnIfTracking('createSequentialQuery', internalState.currentKey);
 
-		trackActiveQueriesCount(key, getParam);
+		trackActiveQueriesCount(key, getParam, options?.gcTime);
 
 		$effect(() => {
 			// Track enabled reactively — if disabled, skip loading
