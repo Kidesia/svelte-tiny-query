@@ -116,6 +116,7 @@ function createQuery<TError, TParam, TData>(
   options?: {
     initialData?: TData;
     staleTime?: number;
+    gcTime?: number;
   }
 ): (
   param?: TParam | (() => TParam),
@@ -148,6 +149,8 @@ You can use the helpers `succeed(data)` and `fail(error)` to construct these val
 
 - **initialData**: Used as the value of `data` before the query has first loaded (instead of `undefined`). When provided, the type of `query.data` is narrowed from `TData | undefined` to `TData`. Can be used to implement persisted queries.
 
+- **gcTime**: Enables garbage collection for the query: its cached state is evicted `gcTime` milliseconds after the query is both **unused** (not part of any mounted component) and **stale**. Fresh data is never collected — with `staleTime: Infinity`, the cache is kept forever, so set that deliberately. Using the query again cancels a pending eviction. If `gcTime` is not set, cached data is kept for the lifetime of the app. You rarely need this — set it on queries whose parameter space is unbounded (search input, per-item detail views), where distinct cache keys accumulate over a session.
+
 #### Return: The Query Function
 
 ```typescript
@@ -159,7 +162,7 @@ You can use the helpers `succeed(data)` and `fail(error)` to construct these val
 
 The query function takes the query parameter (as a value or a thunk) and optional invoke options:
 
-- **enabled**: A reactive getter that controls whether the query loads. While it returns `false`, the query does not load and `loading` is `false`. When it flips to `true`, loading starts. Use this for dependent queries, e.g. `{ enabled: () => !!user.data }`.
+- **enabled**: A reactive getter that controls whether the query loads. While it returns `false`, the query does not load, `loading` is `false`, and `reload` (as well as `loadMore` on sequential queries) does nothing. When it flips to `true`, loading starts. Use this for dependent queries, e.g. `{ enabled: () => !!user.data }`.
 
 It returns the reactive query state:
 
@@ -189,6 +192,7 @@ function createSequentialQuery<TError, TParam, TData, TCursor>(
   options?: {
     initialData?: TData[];
     staleTime?: number;
+    gcTime?: number;
   }
 ): (
   param?: TParam | (() => TParam),
@@ -242,7 +246,7 @@ The state of a sequential query differs from a normal query:
 
 - **data** is an **array of pages** (`TData[]`), one entry per load.
 - **hasMore** indicates whether there is more data to load (`undefined` while loading).
-- **loadMore()** loads the next page using the current cursor.
+- **loadMore()** loads the next page using the current cursor (and does nothing when there is no more data).
 - **reload()** discards the pages and reloads from the start.
 
 Two more differences: `staleTime` defaults to `Infinity` (using a sequential query again does not automatically reload it), and when a stale sequential query reloads, all of its current pages are fetched again in order.
@@ -329,9 +333,6 @@ Use `initialData` to inject persisted data into the query.
 **Mutations**<br />
 Mutations can just be normal functions. Use `invalidateQueries` (or the experimental `updateQueryData`) to update queries after a mutation.
 
-**Cache Eviction**<br />
-Cached data is currently kept for the lifetime of the app. Cache eviction for inactive queries is on the roadmap.
-
 ## Migrating from 1.x
 
 Version 2 changed how parameters are passed to queries:
@@ -345,7 +346,6 @@ Version 2 changed how parameters are passed to queries:
 
 While we want to keep the library _tiny_, there are a few things on our plate:
 
-- Cache eviction for inactive queries
 - Retries on error
 - Query cancellation
 - Stabilize optimistic updates (`updateQueryData`)

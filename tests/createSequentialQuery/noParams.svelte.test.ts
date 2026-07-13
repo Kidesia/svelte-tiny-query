@@ -536,6 +536,175 @@ describe('Sequential Query - No Parameter', () => {
 		]);
 	});
 
+	test('Concurrent loadMore only loads one page', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		type Page = { success: true; data: number[]; cursor: number };
+		const resolvers: ((page: Page) => void)[] = [];
+		const mockLoadingFn = vi.fn(
+			(_: void, cursor: number = 0) =>
+				new Promise<Page>((resolve) => {
+					resolvers.push(() =>
+						resolve({
+							success: true,
+							data: [cursor],
+							cursor: cursor + 10
+						})
+					);
+				})
+		);
+
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['concurrent-load-more-test'],
+				loadingFn: mockLoadingFn
+			}
+		});
+
+		// Resolve the initial load
+		await waitFor(() => expect(resolvers.length).toBe(1));
+		resolvers[0]({ success: true, data: [0], cursor: 10 });
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[0]]')).toBeInTheDocument();
+		});
+
+		// Click "Load More" twice while no load has resolved yet
+		rendered.queryByText('Load More')?.click();
+		rendered.queryByText('Load More')?.click();
+		await vi.advanceTimersByTimeAsync(100);
+
+		// Only one additional load was started
+		expect(mockLoadingFn).toHaveBeenCalledTimes(2);
+
+		resolvers[1]({ success: true, data: [10], cursor: 20 });
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[0],[10]]')).toBeInTheDocument();
+		});
+	});
+
+	test('Failed reload of all pages keeps the cursor consistent', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		let callCount = 0;
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['failed-reload-cursor-test'],
+				loadingFn: async (_, cursor = 0) => {
+					callCount++;
+					// The 4th call is the second page of the invalidation reload
+					if (callCount === 4) {
+						return { success: false, error: 'reload failed' };
+					}
+					return { success: true, data: [cursor], cursor: cursor + 10 };
+				}
+			}
+		});
+
+		// Load two pages (cursor is now 20)
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[0]]')).toBeInTheDocument();
+		});
+		rendered.queryByText('Load More')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[0],[10]]')).toBeInTheDocument();
+		});
+
+		// Invalidate: the reload of page 2 fails, previous data is kept
+		vi.advanceTimersByTime(1000);
+		invalidateQueries(['failed-reload-cursor-test']);
+		await waitFor(() => {
+			expect(rendered.queryByText('Error: reload failed')).toBeInTheDocument();
+			expect(rendered.queryByText('Data: [[0],[10]]')).toBeInTheDocument();
+		});
+
+		// Loading more must continue after the kept pages (cursor 20),
+		// not from the mid-reload cursor
+		rendered.queryByText('Load More')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[0],[10],[20]]')).toBeInTheDocument();
+		});
+	});
+
+	test('Reloading stops early when the data has shrunk', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		let callCount = 0;
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['shrunken-reload-test'],
+				loadingFn: async (_, cursor = 0) => {
+					callCount++;
+					// First two calls: two pages exist
+					if (callCount <= 2) {
+						return { success: true, data: [cursor], cursor: cursor + 10 };
+					}
+					// After that, only a single page without more data
+					return { success: true, data: [99], cursor: undefined };
+				}
+			}
+		});
+
+		// Load two pages
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[0]]')).toBeInTheDocument();
+		});
+		rendered.queryByText('Load More')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[0],[10]]')).toBeInTheDocument();
+		});
+
+		// Invalidate: the first reloaded page has no more data, so the
+		// second page is not fetched again (and not duplicated)
+		vi.advanceTimersByTime(1000);
+		invalidateQueries(['shrunken-reload-test']);
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[99]]')).toBeInTheDocument();
+			expect(rendered.queryByText('Has More: No')).toBeInTheDocument();
+		});
+
+		expect(callCount).toBe(3);
+	});
+
+	test('loadMore does nothing when there is no more data', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const mockLoadingFn = vi.fn(async () => ({
+			success: true as const,
+			data: 'only page',
+			cursor: undefined
+		}));
+
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['load-more-exhausted-test'],
+				loadingFn: mockLoadingFn
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Has More: No')).toBeInTheDocument();
+		});
+		expect(mockLoadingFn).toHaveBeenCalledTimes(1);
+
+		// Load More must not trigger another load
+		rendered.queryByText('Load More')?.click();
+		await vi.advanceTimersByTimeAsync(100);
+
+		expect(mockLoadingFn).toHaveBeenCalledTimes(1);
+	});
+
 	test('Reloads data from all pages when invalidated', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);

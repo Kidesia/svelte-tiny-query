@@ -78,6 +78,13 @@ export function createQuery<
 		 * A stale query will be automatically re-fetched when accessed.
 		 */
 		staleTime?: number;
+		/**
+		 * Time in milliseconds after which the cached state of the query is
+		 * evicted, once the query is unused in any mounted component AND its
+		 * data is stale. Fresh data is never evicted (with staleTime Infinity,
+		 * the cache is kept forever). If not set, cached data is never evicted.
+		 */
+		gcTime?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -115,6 +122,13 @@ export function createQuery<
 		 * A stale query will be automatically re-fetched when accessed.
 		 */
 		staleTime?: number;
+		/**
+		 * Time in milliseconds after which the cached state of the query is
+		 * evicted, once the query is unused in any mounted component AND its
+		 * data is stale. Fresh data is never evicted (with staleTime Infinity,
+		 * the cache is kept forever). If not set, cached data is never evicted.
+		 */
+		gcTime?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -127,6 +141,7 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 	options?: {
 		initialData?: TData;
 		staleTime?: number;
+		gcTime?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -147,7 +162,7 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 		warnIfTracking('createQuery', internalState.currentKey);
 
 		// Register the active query (and unregister later)
-		trackActiveQueriesCount(key, getParam);
+		trackActiveQueriesCount(key, getParam, options?.gcTime);
 
 		$effect(() => {
 			// Track enabled reactively — if disabled, skip loading
@@ -187,10 +202,12 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 				return isLoading === undefined ? true : isLoading;
 			},
 			get data() {
-				return (
-					(dataByKey[internalState.currentKey] as TData | undefined) ??
-					options?.initialData
-				);
+				const currentKey = internalState.currentKey;
+				// "in" instead of "??", so that null/undefined data does not
+				// fall back to initialData once the query has loaded
+				return currentKey in dataByKey
+					? (dataByKey[currentKey] as TData)
+					: options?.initialData;
 			},
 			get error() {
 				return errorByKey[internalState.currentKey] as TError | undefined;
@@ -205,6 +222,7 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 				return isEnabled();
 			},
 			reload: () => {
+				if (!isEnabled()) return;
 				queryLoaderByKey[internalState.currentKey]?.();
 			}
 		};

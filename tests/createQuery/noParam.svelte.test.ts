@@ -275,6 +275,49 @@ describe('Normal Query - No Parameter', () => {
 		]);
 	});
 
+	test('Loaded null data does not fall back to initialData', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['null-data-test'],
+				loadingFn: async () => ({ success: true, data: null }),
+				queryOptions: {
+					initialData: 'initial data'
+				}
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Loading: false')).toBeInTheDocument();
+		});
+
+		expect(states.value).toEqual([
+			// Initial state (initialData is used before the first load)
+			{
+				data: 'initial data',
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
+				enabled: true
+			},
+			// After loading (null is the loaded data, not initialData)
+			{
+				data: null,
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime(),
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
+			}
+		]);
+	});
+
 	test('Reloads data when the query is mounted', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
@@ -729,14 +772,13 @@ describe('Normal Query - No Parameter', () => {
 				staleTimeStamp: mockDate.getTime(),
 				enabled: true
 			},
-			// Force-invalidating (resets and reloads data)
+			// Force-invalidating (forgets all cached state and reloads)
 			{
 				data: undefined,
 				error: undefined,
 				loading: true,
-				loadedTimeStamp: mockDate.getTime(),
-				// invalidating sets the stale time to now - 1
-				staleTimeStamp: mockDate.getTime() + 1000 - 1,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
 				enabled: true
 			},
 			// After reload
@@ -1071,6 +1113,49 @@ describe('Normal Query - Enabled Option', () => {
 		await waitFor(() => {
 			expect(rendered.queryByText('Enabled: true')).toBeInTheDocument();
 		});
+
+		rendered.unmount();
+		vi.useRealTimers();
+	});
+
+	test('Reload does nothing after the query becomes disabled', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const mockLoadingFn = vi.fn(async () => ({
+			success: true as const,
+			data: 'payload'
+		}));
+
+		const states = $state({ value: [] });
+		const rendered = render(WithEnabled, {
+			props: {
+				states,
+				key: ['enabled-then-disabled-reload-test'],
+				loadingFn: mockLoadingFn,
+				initialEnabled: true
+			}
+		});
+
+		// The enabled query loads normally (the loader now exists)
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: payload')).toBeInTheDocument();
+		});
+		expect(mockLoadingFn).toHaveBeenCalledTimes(1);
+
+		// Disable the query
+		rendered.queryByText('Toggle Enabled')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Enabled: false')).toBeInTheDocument();
+		});
+
+		// Reload must not trigger the (existing) loader while disabled
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Reload')?.click();
+		await vi.advanceTimersByTimeAsync(100);
+
+		expect(mockLoadingFn).toHaveBeenCalledTimes(1);
 
 		rendered.unmount();
 		vi.useRealTimers();

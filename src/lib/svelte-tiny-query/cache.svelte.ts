@@ -7,6 +7,11 @@ export const queryLoaderByKey = {} as Record<
 	(mode?: QueryLoadMode) => Promise<void>
 >;
 
+export const evictionTimerByKey = {} as Record<
+	string,
+	ReturnType<typeof setTimeout>
+>;
+
 // Query State
 
 export const loadingByKey = $state({} as Record<string, boolean>);
