@@ -30,7 +30,9 @@
 
 	const param = $state({ id: 1 });
 
-	const { loading, error, data, staleTimeStamp, reload } = emojiQuery(param);
+	const { loading, error, data, staleTimeStamp, reload } = emojiQuery(
+		() => param
+	);
 </script>
 
 <div class="emojis-container">

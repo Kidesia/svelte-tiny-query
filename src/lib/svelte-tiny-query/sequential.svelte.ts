@@ -1,6 +1,12 @@
 import { untrack } from 'svelte';
 
-import { generateKey } from './utils.js';
+import type { QueryInvokeOptions } from './query.svelte';
+import {
+	generateCacheKey,
+	normalizeParam,
+	type QueryLoadMode,
+	type QueryParam
+} from './utils.js';
 import {
 	queryLoaderByKey,
 	loadingByKey,
@@ -11,7 +17,11 @@ import {
 	cursorByKey,
 	hasMoreByKey
 } from './cache.svelte';
-import { trackActiveQueriesCount, withLoading } from './queryHelpers.svelte';
+import {
+	warnIfTracking,
+	trackActiveQueriesCount,
+	withLoading
+} from './queryHelpers.svelte';
 
 // Types
 
@@ -33,6 +43,8 @@ export type SequentialQueryState<TData, TError> = {
 	loadedTimeStamp: number | undefined;
 	/** The timestamp when the data will be considered stale, or `undefined` if no staleTime is set or data hasn't loaded. */
 	staleTimeStamp: number | undefined;
+	/** Whether the query is enabled. When `false`, the query will not fetch data. */
+	enabled: boolean;
 	/** Function to load the next slice of data (if there is more data). */
 	loadMore: () => void;
 	/** Reload function to manually trigger the query again. Resets the cursor to undefined. */
@@ -54,7 +66,7 @@ export type SequentialLoadResult<TData, TCursor, TError> =
 
 export function createSequentialQuery<
 	TError,
-	TParam = void,
+	TParam extends QueryParam = void,
 	TData = unknown,
 	TCursor = unknown
 >(
@@ -67,11 +79,14 @@ export function createSequentialQuery<
 		initialData: TData[];
 		staleTime?: number;
 	}
-): (queryParam: TParam) => SequentialQueryState<TData, TError>;
+): (
+	param?: TParam | (() => TParam),
+	invokeOptions?: QueryInvokeOptions
+) => SequentialQueryState<TData, TError>;
 
 export function createSequentialQuery<
 	TError,
-	TParam = void,
+	TParam extends QueryParam = void,
 	TData = unknown,
 	TCursor = unknown
 >(
@@ -84,12 +99,15 @@ export function createSequentialQuery<
 		initialData?: TData[];
 		staleTime?: number;
 	}
-): (queryParam: TParam) => SequentialQueryState<TData[] | undefined, TError>;
+): (
+	param?: TParam | (() => TParam),
+	invokeOptions?: QueryInvokeOptions
+) => SequentialQueryState<TData[] | undefined, TError>;
 
 export function createSequentialQuery<
 	TData,
 	TError,
-	TParam = void,
+	TParam extends QueryParam = void,
 	TCursor = unknown
 >(
 	key: string[] | ((queryParam: TParam) => string[]),
@@ -101,13 +119,22 @@ export function createSequentialQuery<
 		initialData?: TData[];
 		staleTime?: number;
 	}
-): (param: TParam) => SequentialQueryState<TData[] | undefined, TError> {
-	return (param: TParam) => {
+): (
+	param?: TParam | (() => TParam),
+	invokeOptions?: QueryInvokeOptions
+) => SequentialQueryState<TData[] | undefined, TError> {
+	return (
+		paramOrGetter?: TParam | (() => TParam),
+		invokeOptions?: QueryInvokeOptions
+	) => {
+		const getParam = normalizeParam(paramOrGetter);
+		const isEnabled = invokeOptions?.enabled ?? (() => true);
+
 		// Helpers
 		const loadData = async (
 			queryParam: TParam,
 			cacheKey: string,
-			mode: string,
+			mode: QueryLoadMode,
 			currentData: TData[] | undefined = undefined
 		) => {
 			const cursor = cursorByKey[cacheKey] as TCursor | undefined;
@@ -159,15 +186,22 @@ export function createSequentialQuery<
 		};
 
 		// State
+
 		const internalState = $state({
-			currentKey: generateKey(key, param).join('__')
+			currentKey: generateCacheKey(key, getParam())
 		});
 
-		trackActiveQueriesCount(key, param);
+		warnIfTracking('createSequentialQuery', internalState.currentKey);
+
+		trackActiveQueriesCount(key, getParam);
 
 		$effect(() => {
+			// Track enabled reactively — if disabled, skip loading
+			if (!isEnabled()) return;
+
 			// Reset state and run the query loader when the queryParam changes
-			const cacheKey = generateKey(key, param).join('__');
+			const param = getParam();
+			const cacheKey = generateCacheKey(key, param);
 			const frozenQueryParam = $state.snapshot(param) as TParam;
 
 			untrack(() => {
@@ -176,9 +210,7 @@ export function createSequentialQuery<
 
 				// Create and store the query loader if it doesn't exist
 				if (!queryLoaderByKey[cacheKey]) {
-					const queryLoaderWithParam = async (mode: string) => {
-						const cacheKey = generateKey(key, param).join('__');
-
+					const queryLoaderWithParam = async (mode?: QueryLoadMode) => {
 						withLoading(
 							cacheKey,
 							() => {
@@ -201,7 +233,6 @@ export function createSequentialQuery<
 						);
 					};
 
-					//@ts-expect-error we know that this can have a param
 					queryLoaderByKey[cacheKey] = queryLoaderWithParam;
 				}
 
@@ -212,6 +243,7 @@ export function createSequentialQuery<
 
 		return {
 			get loading() {
+				if (!isEnabled()) return false;
 				const isLoading = loadingByKey[internalState.currentKey];
 				return isLoading === undefined ? true : isLoading;
 			},
@@ -234,6 +266,9 @@ export function createSequentialQuery<
 			},
 			get staleTimeStamp() {
 				return staleTimeStampByKey[internalState.currentKey];
+			},
+			get enabled() {
+				return isEnabled();
 			},
 			loadMore: () => {
 				queryLoaderByKey[internalState.currentKey]?.('more');

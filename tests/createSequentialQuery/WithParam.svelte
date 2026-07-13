@@ -1,27 +1,30 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { createQuery, type LoadResult } from '../../src/lib/index.ts';
-	import { queryInfos } from '../../src/lib/index.ts';
+	import {
+		createSequentialQuery,
+		type SequentialLoadResult
+	} from '../../src/lib/index.ts';
 	import { captureState } from '../testHelpers.ts';
 
 	let {
 		states,
-		activeQueries,
 		key,
 		loadingFn,
 		queryOptions
 	}: {
 		states: { value: unknown[] };
-		activeQueries: { value: unknown[] };
 		key: string[];
-		loadingFn: (param: { id: number }) => Promise<LoadResult<unknown, unknown>>;
+		loadingFn: (
+			param: { id: number },
+			cursor: number | undefined
+		) => Promise<SequentialLoadResult<unknown, number | undefined, unknown>>;
 		queryOptions?: {
 			staleTime?: number;
-			initialData?: unknown;
+			initialData?: unknown[];
 		};
 	} = $props();
 
-	const testQuery = createQuery(key, loadingFn, queryOptions);
+	const testQuery = createSequentialQuery(key, loadingFn, queryOptions);
 
 	let param = $state({ id: 1 });
 
@@ -31,24 +34,20 @@
 		const queryValue = captureState(query);
 		states.value = [...untrack(() => states.value), queryValue];
 	});
-
-	$effect(() => {
-		activeQueries.value = [
-			...untrack(() => activeQueries.value),
-			queryInfos.activeQueries
-		];
-	});
 </script>
 
 <button onclick={() => param.id--}>Decrement</button>
 <button onclick={() => param.id++}>Increment</button>
 <button onclick={query.reload}>Reload</button>
+<button onclick={query.loadMore}>Load More</button>
 
 <div>Loading: {query.loading}</div>
 <div>Error: {query.error}</div>
-<div>Data: {query.data ?? ''}</div>
-<div>Loaded at: {query.loadedTimeStamp ? +query.loadedTimeStamp : '-'}</div>
-
 <div>
-	Active Queries: {JSON.stringify($state.snapshot(activeQueries.value))}
+	Has More: {query.hasMore
+		? 'Yes'
+		: query.hasMore === undefined
+			? 'Maybe'
+			: 'No'}
 </div>
+<div>Data: {query.data ? JSON.stringify(query.data) : ''}</div>

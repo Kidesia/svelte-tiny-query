@@ -2,8 +2,12 @@ import { describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
 import { invalidateQueries } from '../../src/lib/svelte-tiny-query/invalidate.svelte';
+import { activeQueryCounts } from '../../src/lib/svelte-tiny-query/cache.svelte';
 import NoParam from './NoParam.svelte';
 import MultipleNoParam from './MultipleNoParam.svelte';
+import TripleNoParam from './TripleNoParam.svelte';
+import MisusedInDerived from './MisusedInDerived.svelte';
+import WithEnabled from './WithEnabled.svelte';
 
 describe('Normal Query - No Parameter', () => {
 	test('Loads data', async () => {
@@ -31,7 +35,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -39,7 +44,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			}
 		]);
 	});
@@ -69,7 +75,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -77,7 +84,8 @@ describe('Normal Query - No Parameter', () => {
 				error: 'oopsie',
 				loading: false,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			}
 		]);
 	});
@@ -117,7 +125,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -125,7 +134,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Reloading
 			{
@@ -133,7 +143,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// After reload
 			{
@@ -141,7 +152,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: mockDate.getTime() + 1000,
+				enabled: true
 			}
 		]);
 	});
@@ -187,7 +199,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -195,7 +208,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Refetching
 			{
@@ -203,7 +217,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// After error (still has previous data)
 			{
@@ -211,7 +226,8 @@ describe('Normal Query - No Parameter', () => {
 				error: 'oopsie',
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			}
 		]);
 	});
@@ -244,7 +260,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -252,7 +269,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			}
 		]);
 	});
@@ -305,7 +323,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: true,
 					loadedTimeStamp: undefined,
-					staleTimeStamp: undefined
+					staleTimeStamp: undefined,
+					enabled: true
 				},
 				// After loading
 				{
@@ -313,7 +332,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: false,
 					loadedTimeStamp: mockDate.getTime(),
-					staleTimeStamp: mockDate.getTime()
+					staleTimeStamp: mockDate.getTime(),
+					enabled: true
 				},
 				// Hiding (nothing happens)
 				// Showing again (reloads data)
@@ -322,7 +342,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: true,
 					loadedTimeStamp: mockDate.getTime(),
-					staleTimeStamp: mockDate.getTime()
+					staleTimeStamp: mockDate.getTime(),
+					enabled: true
 				},
 				// After reload
 				{
@@ -330,7 +351,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: false,
 					loadedTimeStamp: mockDate.getTime() + 2000,
-					staleTimeStamp: mockDate.getTime() + 2000
+					staleTimeStamp: mockDate.getTime() + 2000,
+					enabled: true
 				}
 			]);
 		});
@@ -401,7 +423,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -409,7 +432,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			},
 			// Hiding (nothing happens)
 			// Showing again (not stale, no reload, but old data is newly initialized)
@@ -418,7 +442,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			},
 			// Hiding again (nothing happens)
 			// Showing again (now stale, reloads data)
@@ -427,7 +452,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			},
 			// After reload
 			{
@@ -435,7 +461,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 4000,
-				staleTimeStamp: mockDate.getTime() + 7000
+				staleTimeStamp: mockDate.getTime() + 7000,
+				enabled: true
 			}
 		]);
 
@@ -446,7 +473,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -454,7 +482,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			},
 			// Hiding (nothing happens)
 			// Showing again (not stale, no reload, no need to newly initialize)
@@ -465,7 +494,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime() + 3000
+				staleTimeStamp: mockDate.getTime() + 3000,
+				enabled: true
 			},
 			// After reload
 			{
@@ -473,7 +503,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 4000,
-				staleTimeStamp: mockDate.getTime() + 7000
+				staleTimeStamp: mockDate.getTime() + 7000,
+				enabled: true
 			}
 		]);
 	});
@@ -534,7 +565,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: true,
 					loadedTimeStamp: undefined,
-					staleTimeStamp: undefined
+					staleTimeStamp: undefined,
+					enabled: true
 				},
 				// After loading
 				{
@@ -542,7 +574,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: false,
 					loadedTimeStamp: mockDate.getTime(),
-					staleTimeStamp: mockDate.getTime()
+					staleTimeStamp: mockDate.getTime(),
+					enabled: true
 				},
 				// Reloading
 				{
@@ -550,7 +583,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: true,
 					loadedTimeStamp: mockDate.getTime(),
-					staleTimeStamp: mockDate.getTime()
+					staleTimeStamp: mockDate.getTime(),
+					enabled: true
 				},
 				// After reload
 				{
@@ -558,7 +592,8 @@ describe('Normal Query - No Parameter', () => {
 					error: undefined,
 					loading: false,
 					loadedTimeStamp: mockDate.getTime() + 1000,
-					staleTimeStamp: mockDate.getTime() + 1000
+					staleTimeStamp: mockDate.getTime() + 1000,
+					enabled: true
 				}
 			]);
 		});
@@ -606,7 +641,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -614,7 +650,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Invalidating (reloads data)
 			{
@@ -623,7 +660,8 @@ describe('Normal Query - No Parameter', () => {
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
 				// invalidating sets the stale time to now - 1
-				staleTimeStamp: mockDate.getTime() + 1000 - 1
+				staleTimeStamp: mockDate.getTime() + 1000 - 1,
+				enabled: true
 			},
 			// After reload
 			{
@@ -631,7 +669,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: mockDate.getTime() + 1000,
+				enabled: true
 			}
 		]);
 	});
@@ -678,7 +717,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: true,
 				loadedTimeStamp: undefined,
-				staleTimeStamp: undefined
+				staleTimeStamp: undefined,
+				enabled: true
 			},
 			// After loading
 			{
@@ -686,7 +726,8 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime(),
-				staleTimeStamp: mockDate.getTime()
+				staleTimeStamp: mockDate.getTime(),
+				enabled: true
 			},
 			// Force-invalidating (resets and reloads data)
 			{
@@ -695,7 +736,8 @@ describe('Normal Query - No Parameter', () => {
 				loading: true,
 				loadedTimeStamp: mockDate.getTime(),
 				// invalidating sets the stale time to now - 1
-				staleTimeStamp: mockDate.getTime() + 1000 - 1
+				staleTimeStamp: mockDate.getTime() + 1000 - 1,
+				enabled: true
 			},
 			// After reload
 			{
@@ -703,8 +745,368 @@ describe('Normal Query - No Parameter', () => {
 				error: undefined,
 				loading: false,
 				loadedTimeStamp: mockDate.getTime() + 1000,
-				staleTimeStamp: mockDate.getTime() + 1000
+				staleTimeStamp: mockDate.getTime() + 1000,
+				enabled: true
 			}
 		]);
+	});
+
+	test('Recovers from error on reload', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		let i = $state(0);
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['error-recovery-test'],
+				loadingFn: async () => {
+					i++;
+					return i === 1
+						? { success: false, error: 'failed' }
+						: { success: true, data: 'recovered' };
+				}
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Error: failed')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Reload')?.click();
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: recovered')).toBeInTheDocument();
+		});
+
+		expect(states.value).toEqual([
+			// Initial state
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
+				enabled: true
+			},
+			// After error
+			{
+				data: undefined,
+				error: 'failed',
+				loading: false,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
+				enabled: true
+			},
+			// Reloading (error is cleared when reload starts)
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
+				enabled: true
+			},
+			// After recovery
+			{
+				data: 'recovered',
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 1000,
+				staleTimeStamp: mockDate.getTime() + 1000,
+				enabled: true
+			}
+		]);
+	});
+
+	test('activeQueryCounts correctly decrements from 3 (double-decrement bug)', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const states1 = $state({ value: [] });
+		const states2 = $state({ value: [] });
+		const states3 = $state({ value: [] });
+		const rendered = render(TripleNoParam, {
+			props: {
+				states1,
+				states2,
+				states3,
+				key: ['triple-decrement-test'],
+				loadingFn: async () => ({ success: true, data: 'data' })
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data 1: data')).toBeInTheDocument();
+			expect(rendered.queryByText('Data 2: data')).toBeInTheDocument();
+			expect(rendered.queryByText('Data 3: data')).toBeInTheDocument();
+		});
+
+		// All 3 components active, count should be 3
+		expect(activeQueryCounts['triple-decrement-test']).toBe(3);
+
+		// Hide component 1 — count should go from 3 to 2, NOT 3 to 1
+		rendered.queryByText('Hide 1')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Component 1 is hidden')).toBeInTheDocument();
+		});
+
+		// BUG: double-decrement causes this to be 1 instead of 2
+		expect(activeQueryCounts['triple-decrement-test']).toBe(2);
+
+		// Hide component 2 — count should go from 2 to 1
+		rendered.queryByText('Hide 2')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Component 2 is hidden')).toBeInTheDocument();
+		});
+
+		expect(activeQueryCounts['triple-decrement-test']).toBe(1);
+
+		// Hide component 3 — count should be removed
+		rendered.queryByText('Hide 3')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Component 3 is hidden')).toBeInTheDocument();
+		});
+
+		expect(activeQueryCounts['triple-decrement-test']).toBeUndefined();
+	});
+
+	test('activeQueryCounts decrements when component is destroyed', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const states1 = $state({ value: [] });
+		const states2 = $state({ value: [] });
+		const rendered = render(MultipleNoParam, {
+			props: {
+				states1,
+				states2,
+				key: ['unmount-cleanup-test'],
+				loadingFn: async () => ({ success: true, data: 'data' })
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data 1: data')).toBeInTheDocument();
+			expect(rendered.queryByText('Data 2: data')).toBeInTheDocument();
+		});
+
+		// Both components are active, count should be 2
+		expect(activeQueryCounts['unmount-cleanup-test']).toBe(2);
+
+		// Hide component 1
+		rendered.queryByText('Hide 1')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Component 1 is hidden')).toBeInTheDocument();
+		});
+
+		// Count should decrement to 1
+		expect(activeQueryCounts['unmount-cleanup-test']).toBe(1);
+
+		// Hide component 2
+		rendered.queryByText('Hide 2')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Component 2 is hidden')).toBeInTheDocument();
+		});
+
+		// Count should be removed (deleted when 0)
+		expect(activeQueryCounts['unmount-cleanup-test']).toBeUndefined();
+	});
+
+	test('Warns when query function is called inside $derived', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		render(MisusedInDerived, {
+			props: {
+				key: ['derived-warning-test'],
+				loadingFn: async () => ({ success: true, data: 'data' })
+			}
+		});
+
+		await waitFor(() => {
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining('was called inside a reactive context')
+			);
+		});
+
+		warnSpy.mockRestore();
+	});
+});
+
+describe('Normal Query - Enabled Option', () => {
+	test('Does not load when enabled is initially false', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const mockLoadingFn = vi.fn(async () => ({
+			success: true as const,
+			data: 'payload'
+		}));
+
+		const states = $state({ value: [] });
+		const rendered = render(WithEnabled, {
+			props: {
+				states,
+				key: ['enabled-false-test'],
+				loadingFn: mockLoadingFn,
+				initialEnabled: false
+			}
+		});
+
+		// Wait a tick to let effects settle
+		await vi.advanceTimersByTimeAsync(100);
+
+		expect(mockLoadingFn).not.toHaveBeenCalled();
+		expect(states.value).toEqual([
+			{
+				data: undefined,
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
+				enabled: false
+			}
+		]);
+
+		rendered.unmount();
+		vi.useRealTimers();
+	});
+
+	test('Starts loading when enabled flips from false to true', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const mockLoadingFn = vi.fn(async () => ({
+			success: true as const,
+			data: 'payload'
+		}));
+
+		const states = $state({ value: [] });
+		const rendered = render(WithEnabled, {
+			props: {
+				states,
+				key: ['enabled-toggle-test'],
+				loadingFn: mockLoadingFn,
+				initialEnabled: false
+			}
+		});
+
+		await vi.advanceTimersByTimeAsync(100);
+		expect(mockLoadingFn).not.toHaveBeenCalled();
+
+		// Toggle enabled to true
+		rendered.queryByText('Toggle Enabled')?.click();
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: payload')).toBeInTheDocument();
+		});
+
+		expect(mockLoadingFn).toHaveBeenCalledTimes(1);
+
+		expect(states.value).toEqual([
+			// Initially disabled
+			{
+				data: undefined,
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
+				enabled: false
+			},
+			// After enabling — loading starts
+			{
+				data: undefined,
+				error: undefined,
+				loading: true,
+				loadedTimeStamp: undefined,
+				staleTimeStamp: undefined,
+				enabled: true
+			},
+			// After loading completes
+			{
+				data: 'payload',
+				error: undefined,
+				loading: false,
+				loadedTimeStamp: mockDate.getTime() + 100,
+				staleTimeStamp: mockDate.getTime() + 100,
+				enabled: true
+			}
+		]);
+
+		rendered.unmount();
+		vi.useRealTimers();
+	});
+
+	test('Enabled state is reactive on the returned query object', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const states = $state({ value: [] });
+		const rendered = render(WithEnabled, {
+			props: {
+				states,
+				key: ['enabled-reactive-test'],
+				loadingFn: async () => ({ success: true, data: 'data' }),
+				initialEnabled: false
+			}
+		});
+
+		await vi.advanceTimersByTimeAsync(100);
+
+		// Check that enabled: false is reflected in the DOM
+		expect(rendered.queryByText('Enabled: false')).toBeInTheDocument();
+
+		// Toggle enabled
+		rendered.queryByText('Toggle Enabled')?.click();
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Enabled: true')).toBeInTheDocument();
+		});
+
+		rendered.unmount();
+		vi.useRealTimers();
+	});
+
+	test('Reload does nothing while disabled', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const mockLoadingFn = vi.fn(async () => ({
+			success: true as const,
+			data: 'payload'
+		}));
+
+		const states = $state({ value: [] });
+		const rendered = render(WithEnabled, {
+			props: {
+				states,
+				key: ['enabled-reload-test'],
+				loadingFn: mockLoadingFn,
+				initialEnabled: false
+			}
+		});
+
+		await vi.advanceTimersByTimeAsync(100);
+		expect(mockLoadingFn).not.toHaveBeenCalled();
+
+		// Try to reload while disabled
+		rendered.queryByText('Reload')?.click();
+		await vi.advanceTimersByTimeAsync(100);
+
+		// loadingFn should still not have been called
+		expect(mockLoadingFn).not.toHaveBeenCalled();
+
+		rendered.unmount();
+		vi.useRealTimers();
 	});
 });

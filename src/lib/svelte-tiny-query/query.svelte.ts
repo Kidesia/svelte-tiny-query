@@ -1,8 +1,12 @@
 import { untrack } from 'svelte';
 
 import type { LoadResult } from './loadHelpers.js';
-import { generateKey } from './utils.js';
-import { trackActiveQueriesCount, withLoading } from './queryHelpers.svelte';
+import { generateCacheKey, normalizeParam, type QueryParam } from './utils.js';
+import {
+	warnIfTracking,
+	trackActiveQueriesCount,
+	withLoading
+} from './queryHelpers.svelte';
 import {
 	queryLoaderByKey,
 	loadingByKey,
@@ -28,8 +32,16 @@ export type QueryState<TData, TError> = {
 	loadedTimeStamp: number | undefined;
 	/** The timestamp when the data will be considered stale, or `undefined` if no staleTime is set or data hasn't loaded. */
 	staleTimeStamp: number | undefined;
+	/** Whether the query is enabled. When `false`, the query will not fetch data. */
+	enabled: boolean;
 	/** Reload function to manually trigger the query again. */
 	reload: () => void;
+};
+
+/** Options for the returned query function (consumer-side). */
+export type QueryInvokeOptions = {
+	/** Reactive getter that controls whether the query is enabled. Defaults to `() => true`. */
+	enabled?: () => boolean;
 };
 
 /**
@@ -48,7 +60,11 @@ export type QueryState<TData, TError> = {
  *
  * @returns A function returning the reactive query state.
  */
-export function createQuery<TError, TParam = void, TData = unknown>(
+export function createQuery<
+	TError,
+	TParam extends QueryParam = void,
+	TData = unknown
+>(
 	key: string[] | ((queryParam: TParam) => string[]),
 	loadFn: (queryParam: TParam) => Promise<LoadResult<TData, TError>>,
 	options: {
@@ -63,7 +79,10 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 		 */
 		staleTime?: number;
 	}
-): (queryParam: TParam) => QueryState<TData, TError>;
+): (
+	param?: TParam | (() => TParam),
+	invokeOptions?: QueryInvokeOptions
+) => QueryState<TData, TError>;
 
 /**
  * Creates a reactive query function for fetching and managing data in Svelte components.
@@ -76,9 +95,13 @@ export function createQuery<TError, TParam = void, TData = unknown>(
  * @param loadFn - An asynchronous function that fetches the data.
  * @param [options] - Optional query configuration.
  *
- * @returns A function returning the reactive query state.
+ * @returns A function that accepts an optional param getter and returns the reactive query state.
  */
-export function createQuery<TError, TParam = void, TData = unknown>(
+export function createQuery<
+	TError,
+	TParam extends QueryParam = void,
+	TData = unknown
+>(
 	key: string[] | ((queryParam: TParam) => string[]),
 	loadFn: (queryParam: TParam) => Promise<LoadResult<TData, TError>>,
 	options?: {
@@ -93,35 +116,53 @@ export function createQuery<TError, TParam = void, TData = unknown>(
 		 */
 		staleTime?: number;
 	}
-): (queryParam: TParam) => QueryState<TData | undefined, TError>;
+): (
+	param?: TParam | (() => TParam),
+	invokeOptions?: QueryInvokeOptions
+) => QueryState<TData | undefined, TError>;
 
-export function createQuery<TData, TError, TParam = void>(
+export function createQuery<TData, TError, TParam extends QueryParam = void>(
 	key: string[] | ((queryParam: TParam) => string[]),
 	loadFn: (queryParam: TParam) => Promise<LoadResult<TData, TError>>,
 	options?: {
 		initialData?: TData;
 		staleTime?: number;
 	}
-): (param: TParam) => QueryState<TData | undefined, TError> {
-	return (param: TParam) => {
+): (
+	param?: TParam | (() => TParam),
+	invokeOptions?: QueryInvokeOptions
+) => QueryState<TData | undefined, TError> {
+	return (
+		paramOrGetter?: TParam | (() => TParam),
+		invokeOptions?: QueryInvokeOptions
+	) => {
+		const getParam = normalizeParam(paramOrGetter);
+		const isEnabled = invokeOptions?.enabled ?? (() => true);
+
 		// Internal state to track the current cache key
 		const internalState = $state({
-			currentKey: generateKey(key, param).join('__')
+			currentKey: generateCacheKey(key, getParam())
 		});
 
+		warnIfTracking('createQuery', internalState.currentKey);
+
 		// Register the active query (and unregister later)
-		trackActiveQueriesCount(key, param);
+		trackActiveQueriesCount(key, getParam);
 
 		$effect(() => {
+			// Track enabled reactively — if disabled, skip loading
+			if (!isEnabled()) return;
+
 			// Reset state and run the query loader when key or queryParam changes
-			const cacheKey = generateKey(key, param).join('__');
+			const param = getParam();
+			const cacheKey = generateCacheKey(key, param);
 			const frozenParam = $state.snapshot(param) as TParam;
 
 			// Set the new cache key in the internal state
 			internalState.currentKey = cacheKey;
 
 			if (!queryLoaderByKey[cacheKey]) {
-				// Create and store the query loader if it doesn't exist (will trigger this effect again)
+				// Create and store the query loader if it doesn't exist
 				queryLoaderByKey[cacheKey] = async () => {
 					untrack(() => {
 						withLoading(
@@ -141,6 +182,7 @@ export function createQuery<TData, TError, TParam = void>(
 		// Return reactive query state
 		return {
 			get loading() {
+				if (!isEnabled()) return false;
 				const isLoading = loadingByKey[internalState.currentKey];
 				return isLoading === undefined ? true : isLoading;
 			},
@@ -158,6 +200,9 @@ export function createQuery<TData, TError, TParam = void>(
 			},
 			get staleTimeStamp() {
 				return staleTimeStampByKey[internalState.currentKey];
+			},
+			get enabled() {
+				return isEnabled();
 			},
 			reload: () => {
 				queryLoaderByKey[internalState.currentKey]?.();

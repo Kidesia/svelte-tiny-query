@@ -8,15 +8,27 @@ import {
 	dataByKey
 } from './cache.svelte';
 import type { LoadResult } from './loadHelpers.js';
-import { generateKey } from './utils.js';
+import { generateCacheKey } from './utils.js';
+
+export function warnIfTracking(fnName: string, key: string) {
+	if ($effect.tracking()) {
+		console.warn(
+			`${fnName} (${key}): The returned query function was called inside a reactive context ` +
+				'($derived, $effect, .map(), or template expression). ' +
+				'This will cause unexpected behavior. ' +
+				'Call it at the top level of your component instead, and use a getter for reactive params:\n' +
+				'  const query = myQuery(() => param);'
+		);
+	}
+}
 
 export function trackActiveQueriesCount(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	key: string[] | ((p: any) => string[]),
-	param: unknown
+	paramGetter: () => unknown
 ) {
 	$effect(() => {
-		const cacheKey = generateKey(key, param).join('__');
+		const cacheKey = generateCacheKey(key, paramGetter());
 
 		untrack(() => {
 			// Increment the active query count for this cache key
@@ -25,15 +37,11 @@ export function trackActiveQueriesCount(
 
 		return () => {
 			// Decrement the active query count when the query is destroyed
-			const newCount = Math.max((activeQueryCounts[cacheKey] ?? 0) - 1, 0);
-			if (newCount <= 0) {
+			const count = (activeQueryCounts[cacheKey] ?? 0) - 1;
+			if (count <= 0) {
 				delete activeQueryCounts[cacheKey];
-				return;
 			} else {
-				activeQueryCounts[cacheKey] = Math.max(
-					(activeQueryCounts[cacheKey] ?? 0) - 1,
-					0
-				);
+				activeQueryCounts[cacheKey] = count;
 			}
 		};
 	});
@@ -48,7 +56,7 @@ export async function withLoading<TData, TError>(
 	// Check if the query is already loading or still has fresh data
 	const alreadyLoading = loadingByKey[key];
 	const alreadyLoaded = !!loadedTimeStampByKey[key];
-	const staleData = staleTimeStampByKey[key] <= +new Date();
+	const staleData = staleTimeStampByKey[key] <= Date.now();
 	if (!force && (alreadyLoading || (alreadyLoaded && !staleData))) {
 		return;
 	}
@@ -61,8 +69,8 @@ export async function withLoading<TData, TError>(
 	const loadResult = await loadFn();
 	if (loadResult.success) {
 		dataByKey[key] = loadResult.data;
-		loadedTimeStampByKey[key] = +new Date();
-		staleTimeStampByKey[key] = +new Date() + staleTime;
+		loadedTimeStampByKey[key] = Date.now();
+		staleTimeStampByKey[key] = Date.now() + staleTime;
 	} else {
 		errorByKey[key] = loadResult.error;
 	}

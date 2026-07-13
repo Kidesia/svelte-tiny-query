@@ -1,54 +1,40 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { createQuery, type LoadResult } from '../../src/lib/index.ts';
-	import { queryInfos } from '../../src/lib/index.ts';
 	import { captureState } from '../testHelpers.ts';
 
 	let {
 		states,
-		activeQueries,
 		key,
 		loadingFn,
-		queryOptions
+		queryOptions,
+		initialEnabled = true
 	}: {
 		states: { value: unknown[] };
-		activeQueries: { value: unknown[] };
 		key: string[];
-		loadingFn: (param: { id: number }) => Promise<LoadResult<unknown, unknown>>;
+		loadingFn: () => Promise<LoadResult<unknown, unknown>>;
 		queryOptions?: {
 			staleTime?: number;
 			initialData?: unknown;
 		};
+		initialEnabled?: boolean;
 	} = $props();
 
 	const testQuery = createQuery(key, loadingFn, queryOptions);
 
-	let param = $state({ id: 1 });
+	let isEnabled = $state(initialEnabled);
 
-	const query = testQuery(() => param);
+	const query = testQuery(undefined, { enabled: () => isEnabled });
 
 	$effect(() => {
 		const queryValue = captureState(query);
 		states.value = [...untrack(() => states.value), queryValue];
 	});
-
-	$effect(() => {
-		activeQueries.value = [
-			...untrack(() => activeQueries.value),
-			queryInfos.activeQueries
-		];
-	});
 </script>
 
-<button onclick={() => param.id--}>Decrement</button>
-<button onclick={() => param.id++}>Increment</button>
+<button onclick={() => (isEnabled = !isEnabled)}>Toggle Enabled</button>
 <button onclick={query.reload}>Reload</button>
-
 <div>Loading: {query.loading}</div>
 <div>Error: {query.error}</div>
 <div>Data: {query.data ?? ''}</div>
-<div>Loaded at: {query.loadedTimeStamp ? +query.loadedTimeStamp : '-'}</div>
-
-<div>
-	Active Queries: {JSON.stringify($state.snapshot(activeQueries.value))}
-</div>
+<div>Enabled: {query.enabled}</div>

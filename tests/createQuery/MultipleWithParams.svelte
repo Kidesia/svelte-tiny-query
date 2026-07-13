@@ -25,8 +25,8 @@
 	let param1 = $state({ id: 1 });
 	let param2 = $state({ id: 1 });
 
-	const query1 = testQuery(param1);
-	const query2 = testQuery(param2);
+	const query1 = testQuery(() => param1);
+	const query2 = testQuery(() => param2);
 
 	$effect(() => {
 		const queryValue = captureState(query1);

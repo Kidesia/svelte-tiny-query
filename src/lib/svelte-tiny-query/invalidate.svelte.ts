@@ -8,6 +8,7 @@ import {
 	hasMoreByKey,
 	cursorByKey
 } from './cache.svelte';
+import { KEY_SEPARATOR } from './utils.js';
 
 /**
  * Invalidates queries based on the provided key.
@@ -22,19 +23,25 @@ export function invalidateQueries(
 	key: string[],
 	options?: { force?: boolean; exact?: boolean }
 ) {
-	const cacheKey = key.join('__');
+	const cacheKey = key.join(KEY_SEPARATOR);
+	const cacheKeyPrefix = cacheKey + KEY_SEPARATOR;
+
+	const matches = (candidate: string) =>
+		options?.exact
+			? candidate === cacheKey
+			: candidate === cacheKey || candidate.startsWith(cacheKeyPrefix);
 
 	// Mark all matching queries as stale
 	Object.keys(staleTimeStampByKey).forEach((key) => {
-		if (options?.exact ? key === cacheKey : key.startsWith(cacheKey)) {
-			staleTimeStampByKey[key] = +new Date() - 1;
+		if (matches(key)) {
+			staleTimeStampByKey[key] = Date.now() - 1;
 		}
 	});
 
 	// Reset the cache data of the matching queries if forced
 	if (options?.force) {
 		Object.keys(dataByKey).forEach((key) => {
-			if (options?.exact ? key === cacheKey : key.startsWith(cacheKey)) {
+			if (matches(key)) {
 				delete loadingByKey[key];
 				delete dataByKey[key];
 				delete errorByKey[key];
@@ -46,10 +53,7 @@ export function invalidateQueries(
 
 	// Reload the (matching) active queries right away
 	Object.entries(activeQueryCounts).forEach(([key, usageCount]) => {
-		if (
-			usageCount > 0 &&
-			(options?.exact ? key === cacheKey : key.startsWith(cacheKey))
-		) {
+		if (usageCount > 0 && matches(key)) {
 			queryLoaderByKey[key]?.();
 		}
 	});
@@ -64,10 +68,14 @@ export function updateQueryData(
 	key: string[],
 	updater: (currentData: unknown) => unknown
 ) {
-	const cacheKey = key.join('__');
+	const cacheKey = key.join(KEY_SEPARATOR);
+	const cacheKeyPrefix = cacheKey + KEY_SEPARATOR;
 
 	Object.keys(activeQueryCounts).forEach((activeKey) => {
-		if (activeKey.startsWith(cacheKey) && activeQueryCounts[activeKey] > 0) {
+		if (
+			(activeKey === cacheKey || activeKey.startsWith(cacheKeyPrefix)) &&
+			activeQueryCounts[activeKey] > 0
+		) {
 			dataByKey[activeKey] = updater(dataByKey[activeKey]);
 		}
 	});
