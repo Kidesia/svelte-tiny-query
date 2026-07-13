@@ -207,6 +207,7 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 				return isEnabled();
 			},
 			reload: () => {
+				if (!isEnabled()) return;
 				queryLoaderByKey[internalState.currentKey]?.();
 			}
 		};

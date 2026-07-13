@@ -273,9 +273,11 @@ export function createSequentialQuery<
 				return isEnabled();
 			},
 			loadMore: () => {
+				if (!isEnabled()) return;
 				queryLoaderByKey[internalState.currentKey]?.('more');
 			},
 			reload: () => {
+				if (!isEnabled()) return;
 				queryLoaderByKey[internalState.currentKey]?.('reload');
 			}
 		};

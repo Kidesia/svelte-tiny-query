@@ -1118,6 +1118,49 @@ describe('Normal Query - Enabled Option', () => {
 		vi.useRealTimers();
 	});
 
+	test('Reload does nothing after the query becomes disabled', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const mockLoadingFn = vi.fn(async () => ({
+			success: true as const,
+			data: 'payload'
+		}));
+
+		const states = $state({ value: [] });
+		const rendered = render(WithEnabled, {
+			props: {
+				states,
+				key: ['enabled-then-disabled-reload-test'],
+				loadingFn: mockLoadingFn,
+				initialEnabled: true
+			}
+		});
+
+		// The enabled query loads normally (the loader now exists)
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: payload')).toBeInTheDocument();
+		});
+		expect(mockLoadingFn).toHaveBeenCalledTimes(1);
+
+		// Disable the query
+		rendered.queryByText('Toggle Enabled')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Enabled: false')).toBeInTheDocument();
+		});
+
+		// Reload must not trigger the (existing) loader while disabled
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Reload')?.click();
+		await vi.advanceTimersByTimeAsync(100);
+
+		expect(mockLoadingFn).toHaveBeenCalledTimes(1);
+
+		rendered.unmount();
+		vi.useRealTimers();
+	});
+
 	test('Reload does nothing while disabled', async () => {
 		vi.useFakeTimers();
 		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
