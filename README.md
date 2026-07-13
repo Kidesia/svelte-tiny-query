@@ -1,6 +1,6 @@
 # Svelte Tiny Query 🦄
 
-Define declarative queries that handle caching, deduping, reloading and help you simplify your codebase. Built on **Svelte 5's reactivity**, it’s _tiny_ (<1kB gzipped) and fully type-safe.
+Define declarative queries that handle caching, deduping and reloading, and help you simplify your codebase. Built on **Svelte 5's reactivity**, it's _tiny_ (~2kB gzipped) and fully type-safe.
 
 **Features**
 
@@ -8,7 +8,8 @@ Define declarative queries that handle caching, deduping, reloading and help you
 - 💾 Caching and stale-time support
 - 👬 Deduplication of identical loads
 - 🚧 Query invalidation from anywhere
-- 🐍 Written in typescript
+- 📜 Sequential queries (pagination, load-more)
+- 🐍 Written in TypeScript
 
 ## Usage
 
@@ -22,14 +23,14 @@ And use it in your components.
 <script>
   import { createQuery } from 'svelte-tiny-query';
 
-  // Create a query that represents the "meme-idea" resource
-  const useMemeIdeaQuery = createQuery(
-    // Key to uniquely identify the resource
+  // A query that represents the "meme-idea" resource
+  const useMemeIdea = createQuery(
+    // Key which uniquely identifies the resource
     ['meme-ideas'],
-    // Loading function that returns the data or error
-    async ({ id }) => {
+    // Loading function which returns data or an error
+    async (id) => {
       try {
-        const memeIdea = await fetchDataSomehow(id);
+        const memeIdea = await fetchMemeIdea(id);
         return { success: true, data: memeIdea };
       } catch (e) {
         return { success: false, error: 'Oopsie!' };
@@ -37,164 +38,281 @@ And use it in your components.
     }
   );
 
-  // The query param can be reactive to
-  const param = $state({ id: 1 });
+  let currentId = $state(1);
 
-  // Invoke the query to access its reactive state
-  const memeIdeaQuery = useMemeIdeaQuery(param);
-
-  // When destructuring, make sure to use $derived!
-  const { loading, data, error } = $derived(useMemeIdeaQuery(param));
+  // Invoke the query at the top level of your component.
+  // Reactive params are passed as functions ("thunks").
+  const memeIdeaQuery = useMemeIdea(() => currentId);
 </script>
 
-{#if memeIdeaQuery.loading}Query is loading{/if}
-{#if memeIdeaQuery.error}Error: {memeIdeaQuery.error}{/if}
-{#if memeIdeaQuery.data}Data: {memeIdeaQuery.data}{/if}
+{#if memeIdeaQuery.loading}
+  Loading...
+{:else if memeIdeaQuery.error}
+  Error: {memeIdeaQuery.error}
+{:else}
+  Data: {JSON.stringify(memeIdeaQuery.data)}
+{/if}
 
-<button onclick={memeIdeaQuery.reload}> Reload</button>
-
-<button onclick={() => param++}> Next Meme Idea</button>
+<button onclick={memeIdeaQuery.reload}>Reload</button>
+<button onclick={() => currentId++}>Next Meme Idea</button>
 ```
 
 ## Basics
 
 ### The Query
 
-A **query** is an abstraction for loading and caching data. It consists of a **loading function** which produces some data, and a **unique key** which identifies that data. Queries expose their reactive `data`, `error`, and `loading` state, along with a `reload` function.
+A **query** is an abstraction for loading and caching data. It consists of a **loading function** which produces some data, and a **unique key** which identifies that data. Queries expose their reactive state (`data`, `error`, `loading` and more), along with a `reload` function.
 
-Svelte Tiny Query uses Svelte 5's `$state` to **cache _all_ states of _all_ queries**, indexed by their keys. When you use a query, you are essentially getting reactive access to a small part of the global cache based on the current key.
+Svelte Tiny Query uses Svelte 5's `$state` to **cache the states of _all_ queries globally**, indexed by their keys. When you use a query, you get reactive access to a small part of that global cache, based on the current key.
 
 ### Keys and Parameters
 
-Queries can have one or zero parameters, and the parameter can be reactive. If it is reactive and the value changes, the query now points to the new bit of global cache and triggers the loading function if appropriate.
+A query can have one parameter (or none), and the parameter can be reactive. When its value changes, the query points to a different part of the global cache and triggers its loading function, if the cached data is missing or stale.
 
-The key of a query has to uniquely identify the data that the query produces, and thus depends also on the parameters of the query. In Svelte Tiny Query, the parameter is automatically included in the final key, but you can also use a function to
+To keep the parameter reactive, pass it as a **thunk** (a function returning the value):
 
-### When is a query reloaded?
+```typescript
+const query = useMemeIdea(() => currentId);
+```
 
-Each query is loaded when it is first used (unless there exists not yet stale cache data for it) and when its `reload` function is used.
+Passing a plain value also works, but only stays reactive if the value is a `$state` proxy (an object or array). Primitives passed directly are captured once and never update — when in doubt, use a thunk.
+
+The key of a query has to uniquely identify the data that the query produces, so it must include the parameter in some form:
+
+- If the key is an **array of strings**, the serialized parameter is automatically appended to it. A query with key `['meme-ideas']` and parameter `{ id: 1 }` is cached under `['meme-ideas', '{"id":1}']`. Serialization is deterministic (object keys are sorted), and `string`, `number`, `boolean`, `bigint`, `Date`, `RegExp`, arrays and plain objects are all supported.
+
+- If the key is a **function**, it receives the parameter and returns the key segments. This gives you full control and allows nested keys like `['meme-ideas', '1', 'comments']`, which are useful for hierarchical invalidation.
+
+### One important rule
+
+Invoke the query function **at the top level of your component** — not inside `$derived`, `$effect`, `{#each}` mappings or template expressions. The invocation registers effects, so it needs to run during component initialization. The library warns in the console when it detects a violation of this rule.
+
+This also means the query state should not be destructured (destructuring would freeze the values). Access the properties on the returned object instead:
+
+```typescript
+const query = useMemeIdea(() => currentId);
+// ✅ query.data, query.loading, query.error
+// ❌ const { data, loading } = useMemeIdea(() => currentId);
+```
+
+### When does a query load?
+
+A query loads when it is first used, when its key changes (via the parameter), when it is used again and the cached data is stale, when it is invalidated via `invalidateQueries`, and when its `reload` function is called. Identical loads are deduplicated: if five components use the same query with the same key at the same time, the loading function runs once.
+
+### Server-side rendering
+
+Loading happens in `$effect`, which only runs in the browser. During SSR, queries simply render in their loading state and fetch after hydration. There is no server-side fetching or cache hydration.
 
 ## API Reference
 
-Svelte Tiny Query only exports 2 functions (`createQuery` and `invalidateQueries`), 2 tiny helpers (`fail` and `succeed`) and one readonly state (`queryInfos`).
+Svelte Tiny Query exports the query constructors `createQuery` and `createSequentialQuery`, the cache tools `invalidateQueries` and `updateQueryData`, the helpers `succeed` and `fail`, and the readonly state `queryInfos`.
 
 ### `createQuery`
 
 ```typescript
-(
-  key: string[] | (param: P) => string[],
-  loadFn: (param: P) => LoadResult<T, E>,
-  options?: { initialData?: T, staleTime?: number }
-) =>
-  (param: P) => {
-    data: T | undefined,
-    error: E | undefined,
-    loading: boolean,
-    reload: () => void
+function createQuery<TError, TParam, TData>(
+  key: string[] | ((param: TParam) => string[]),
+  loadFn: (param: TParam) => Promise<LoadResult<TData, TError>>,
+  options?: {
+    initialData?: TData;
+    staleTime?: number;
   }
+): (
+  param?: TParam | (() => TParam),
+  invokeOptions?: { enabled?: () => boolean }
+) => QueryState<TData, TError>;
 ```
 
-Creates a query function which can be invoked to get reactive access to the query state.
-
-- `T` is the data that is returned by the loading function
-- `P` is the parameter which is passed into the query function
-- `E` is the error which might be returned by the loading function
+Creates a query function which can be invoked (at the top level of a component) to get reactive access to the query state.
 
 #### Param 1: Key
 
-```typescript
-key: string[] | (P) => string[]
-```
-
-The **key** of a query is crucial for caching and invalidating the query. It must be unique — otherwise, different queries will overwrite each other’s state.
-
-- If the key is a _function_, it receives the query's parameter and returns an array of strings. This allows for nested keys like `["meme-ideas", "1", "comments"]`.
-
-- If the key is not a function but the query takes a parameter, the **parameter is serialized and appended to the key**. In the example above, the key intially is `["meme-ideas", "id:1"]`.
+The **key** identifies the data of the query in the global cache. It must be unique — otherwise, different queries will overwrite each other's state. It is either an array of strings (the serialized query parameter is appended automatically), or a function from the parameter to an array of strings. See [Keys and Parameters](#keys-and-parameters).
 
 #### Param 2: Loading Function
 
 ```typescript
-loadFn: (param: P) => Promise<LoadResult<T, E>>;
+loadFn: (param: TParam) => Promise<LoadResult<TData, TError>>;
 ```
 
-An asychronous function that returns the new data or error. It accepts a parameter `P`, which is the value passed to the query. This parameter can be reactive, and if its value changes, the query will automatically re-initialize.
+An asynchronous function that produces the data or an error. It receives the current value of the query parameter. The returned `LoadResult` is either:
 
-The function returns a `LoadResult`, which can either be:
+- `{ success: true, data: TData }`
+- `{ success: false, error: TError }`
 
-- `{ success: true, data: T }`
-- `{ success: false, error: E }`
-
-You can use the helper functions `succeed(data: T)` and `fail(error: E)` to easily construct these values.
+You can use the helpers `succeed(data)` and `fail(error)` to construct these values. Note that the loading function is expected to **return** errors, not throw them — wrap throwing code in `try`/`catch`.
 
 #### Param 3: Options (optional)
 
-```typescript
-options?: {
-  staleTime: 0 as number
-  initialData: undefined as T | undefined,
-}
-```
+- **staleTime**: How long (in milliseconds) the loaded data stays fresh. A query whose data is fresh is not automatically reloaded when it is used again. Defaults to `0` (using a query always reloads it). Set it to `Infinity` to never reload automatically.
 
-- **staleTime**: Defines how long (in milliseconds) before the query is considered stale. Before this time is reached, the query is not automatically reloaded. Defaults to 0 (query always reloads) and can also be set to infinity, to prevent reloads completely.
-
-- **initialData**: This is used as the initial value of `data` before the query has finished loading (instead of undefined). Can be used to implement persisted queries.
+- **initialData**: Used as the value of `data` before the query has first loaded (instead of `undefined`). When provided, the type of `query.data` is narrowed from `TData | undefined` to `TData`. Can be used to implement persisted queries.
 
 #### Return: The Query Function
 
 ```typescript
-(param: P) => {
-  data: T | undefined,
-  error: E | undefined,
-  loading: boolean,
-  reload: () => void
-}
+(
+  param?: TParam | (() => TParam),
+  invokeOptions?: { enabled?: () => boolean }
+) => QueryState<TData, TError>;
 ```
 
-The `createQuery` function returns a query function that gives you access to the reactive state of the query (`data`, `error`, `loading`), and a `reload` function.
+The query function takes the query parameter (as a value or a thunk) and optional invoke options:
 
-- The query function checks the cache for existing data. If the data is found and not stale, it’s returned immediately.
+- **enabled**: A reactive getter that controls whether the query loads. While it returns `false`, the query does not load and `loading` is `false`. When it flips to `true`, loading starts. Use this for dependent queries, e.g. `{ enabled: () => !!user.data }`.
 
-- If the data isn’t in the cache or is stale, the loading function is triggered. While it’s loading, the `loading` state is set to `true`.
+It returns the reactive query state:
 
-- Once the loading function completes, the query state updates with the new data or error, and the data is cached for future use.
+```typescript
+type QueryState<TData, TError> = {
+  loading: boolean;
+  data: TData | undefined; // TData, if initialData was provided
+  error: TError | undefined;
+  loadedTimeStamp: number | undefined;
+  staleTimeStamp: number | undefined;
+  enabled: boolean;
+  reload: () => void;
+};
+```
 
-- The `reload` function can be used to manually reload the data, which will update the cache and reset the state as needed.
+While a query reloads, its previous `data` remains available (stale-while-revalidate). If a reload fails, `error` is set and the previous `data` is kept.
 
-- If the query has reactive parameters, a change will trigger a re-initialization, causing a reload based on the new cache key.
+### `createSequentialQuery`
+
+```typescript
+function createSequentialQuery<TError, TParam, TData, TCursor>(
+  key: string[] | ((param: TParam) => string[]),
+  loadFn: (
+    param: TParam,
+    cursor?: TCursor
+  ) => Promise<SequentialLoadResult<TData, TCursor, TError>>,
+  options?: {
+    initialData?: TData[];
+    staleTime?: number;
+  }
+): (
+  param?: TParam | (() => TParam),
+  invokeOptions?: { enabled?: () => boolean }
+) => SequentialQueryState<TData, TError>;
+```
+
+A cursor-based query for paginated data ("load more"). The loading function receives the query parameter and the current cursor (`undefined` on the first load), and returns:
+
+- `{ success: true, data: TData, cursor: TCursor | undefined }`
+- `{ success: false, error: TError }`
+
+Returning `undefined` as the cursor signals that there is no more data.
+
+```svelte
+<script>
+  import { createSequentialQuery } from 'svelte-tiny-query';
+
+  const useComments = createSequentialQuery(
+    ['comments'],
+    async (postId, cursor) => {
+      try {
+        const page = await fetchComments(postId, cursor);
+        return {
+          success: true,
+          data: page.items,
+          cursor: page.nextCursor // undefined = no more pages
+        };
+      } catch (e) {
+        return { success: false, error: 'Oopsie!' };
+      }
+    }
+  );
+
+  let postId = $state(1);
+  const commentsQuery = useComments(() => postId);
+</script>
+
+{#each commentsQuery.data ?? [] as page}
+  {#each page as comment}
+    <p>{comment.text}</p>
+  {/each}
+{/each}
+
+{#if commentsQuery.hasMore}
+  <button onclick={commentsQuery.loadMore}>Load More</button>
+{/if}
+```
+
+The state of a sequential query differs from a normal query:
+
+- **data** is an **array of pages** (`TData[]`), one entry per load.
+- **hasMore** indicates whether there is more data to load (`undefined` while loading).
+- **loadMore()** loads the next page using the current cursor.
+- **reload()** discards the pages and reloads from the start.
+
+Two more differences: `staleTime` defaults to `Infinity` (using a sequential query again does not automatically reload it), and when a stale sequential query reloads, all of its current pages are fetched again in order.
 
 ### `invalidateQueries`
 
 ```typescript
-(key: string[]) => void
+function invalidateQueries(
+  key: string[],
+  options?: { force?: boolean; exact?: boolean }
+): void;
 ```
 
-Invalidates a query and its children by key. If a query is invalidated, and it is active (on a mounted component), its loading function is triggered. This happens, whether the query is stale or not.
+Invalidates all queries whose key starts with the given key. Invalidated queries are marked as stale, and those that are **active** (currently used in a mounted component) reload immediately. If multiple components use an invalidated query, its loading function only runs once.
 
-If multiple identical queries are invalidated, the loading function is only run once.
+- **exact**: Only invalidate the query with exactly this key, not queries with child keys.
+- **force**: Additionally clear the cached data right away. Active queries lose their `data` until the reload finishes (no stale-while-revalidate).
+
+```typescript
+// invalidates ['meme-ideas'], ['meme-ideas', '1'], etc.
+invalidateQueries(['meme-ideas']);
+
+// invalidates only ['meme-ideas', '1']
+invalidateQueries(['meme-ideas', '1'], { exact: true });
+
+// invalidates and immediately clears the cached data
+invalidateQueries(['meme-ideas'], { force: true });
+```
+
+Note that when using automatic key generation (key as array of strings), the serialized parameter is part of the key: the query `useMemeIdea(() => 1)` with key `['meme-ideas']` is cached under `['meme-ideas', '1']` and can be invalidated with either `['meme-ideas']` or `['meme-ideas', '1']`.
+
+### `updateQueryData` (experimental)
+
+```typescript
+function updateQueryData(
+  key: string[],
+  updater: (currentData: unknown) => unknown
+): void;
+```
+
+Directly updates the cached data of all **active** queries whose key starts with the given key. Useful for optimistic updates. This API is experimental and may change.
+
+```typescript
+updateQueryData(['meme-ideas', '1'], (current) => ({
+  ...current,
+  title: 'Updated Title'
+}));
+```
 
 ### `queryInfos`
 
 ```typescript
 {
-  isLoading: bool;
+  isLoading: boolean;
   loadingQueries: string[][];
   activeQueries: string[][];
   cachedQueries: string[][];
 }
 ```
 
-- **isLoading**: Indicates if any query is currently loading.
+A readonly reactive object with information about all queries:
 
-- **loadingQueries**: Array of the keys of the currently loading queries.
+- **isLoading**: Whether any query is currently loading. Useful for global loading indicators.
+- **loadingQueries**: Keys of the currently loading queries.
+- **activeQueries**: Keys of the currently active queries (used in a mounted component).
+- **cachedQueries**: Keys of the queries that currently have cached data.
 
-- **activeQueries**: Array of the keys of the currently active queries. A query is considered active, when it is used in a currently mounted component.
+## What is Omitted
 
-- **cachedQueries**: Array of the keys of the currently cached queries. A query is cached, when it has been loaded and has since not been force-invalidated.
-
-## What is Omited
-
-Svelte Tiny Query deliberately omits some features that other query libraries offer. Here are some of those:
+Svelte Tiny Query deliberately omits some features that other query libraries offer:
 
 **Query Provider**<br />
 There is no need to set up a query provider. Queries and their caches are global in your app.
@@ -203,24 +321,34 @@ There is no need to set up a query provider. Queries and their caches are global
 Use `$effect`, `setInterval` (or `addEventListener`) and `reload` to achieve this yourself.
 
 **Dependent Queries**<br />
-Use `$derived` to conditionally invoke the query function.
+Use the `enabled` option to only load a query when its prerequisites are ready.
 
 **Persisted Queries**<br />
-Use `initialData` to inject perstisted data into the query.
+Use `initialData` to inject persisted data into the query.
 
 **Mutations**<br />
-Use `invalidateQueries` anywhere in your app to invalidate queries. This means mutations can just be normal functions.
+Mutations can just be normal functions. Use `invalidateQueries` (or the experimental `updateQueryData`) to update queries after a mutation.
+
+**Cache Eviction**<br />
+Cached data is currently kept for the lifetime of the app. Cache eviction for inactive queries is on the roadmap.
+
+## Migrating from 1.x
+
+Version 2 changed how parameters are passed to queries:
+
+- Reactive parameters are now passed as **thunks**: `useQuery(() => param)` instead of `useQuery(param)`.
+- Query functions must be invoked at the **top level of a component**. In particular, `$derived(useQuery(param))` — recommended in the 1.x docs — is no longer supported and triggers a console warning. Use the returned object's reactive properties directly instead of destructuring.
+- The query state gained `loadedTimeStamp`, `staleTimeStamp` and `enabled` fields, and the invoke options gained `enabled`.
+- `createSequentialQuery`, `updateQueryData` and the `force`/`exact` options of `invalidateQueries` are new.
 
 ## Roadmap
 
-While we want to keep the library _tiny_, there are a few things on our plate.
+While we want to keep the library _tiny_, there are a few things on our plate:
 
-- Optimistic updates (`upateQuery`)
+- Cache eviction for inactive queries
 - Retries on error
-- Paginated and/or load-more queries
 - Query cancellation
-- Unused cache clearing (maybe?)
-- Tests (d'uh!)
+- Stabilize optimistic updates (`updateQueryData`)
 
 ## Thanks
 
