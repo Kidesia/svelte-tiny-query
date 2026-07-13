@@ -53,11 +53,12 @@ export async function withLoading<TData, TError>(
 	staleTime = 0,
 	force = false
 ) {
-	// Check if the query is already loading or still has fresh data
+	// Skip if this query is already loading (loads are never concurrent per
+	// key, not even when forced) or if it still has fresh data (unless forced)
 	const alreadyLoading = loadingByKey[key];
 	const alreadyLoaded = !!loadedTimeStampByKey[key];
 	const staleData = staleTimeStampByKey[key] <= Date.now();
-	if (!force && (alreadyLoading || (alreadyLoaded && !staleData))) {
+	if (alreadyLoading || (!force && alreadyLoaded && !staleData)) {
 		return;
 	}
 

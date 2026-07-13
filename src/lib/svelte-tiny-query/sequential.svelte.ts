@@ -131,58 +131,23 @@ export function createSequentialQuery<
 		const isEnabled = invokeOptions?.enabled ?? (() => true);
 
 		// Helpers
-		const loadData = async (
-			queryParam: TParam,
-			cacheKey: string,
-			mode: QueryLoadMode,
-			currentData: TData[] | undefined = undefined
-		) => {
-			const cursor = cursorByKey[cacheKey] as TCursor | undefined;
 
-			const loadResult = await loadFn(
-				queryParam,
-				mode === 'more' ? cursor : undefined
-			);
-
-			if (!loadResult.success) return loadResult;
-
-			cursorByKey[cacheKey] = loadResult.cursor;
-			hasMoreByKey[cacheKey] = loadResult.cursor !== undefined;
-
-			let newData = currentData ? [...currentData] : [];
-
-			if (Array.isArray(currentData) && mode === 'more') {
-				newData.push(loadResult.data);
-			} else {
-				newData = [loadResult.data];
-			}
-
-			return {
-				success: true as const,
-				data: newData
-			};
-		};
-
-		const reloadAllPages = async (queryParam: TParam, cacheKey: string) => {
-			const currentData = dataByKey[cacheKey] as TData[] | undefined;
-			const numPages = currentData?.length ?? 1;
-			let newData = [] as TData[];
+		// Loads pages sequentially from the start (up to numPages), stopping
+		// early when there is no more data
+		const loadPagesFromStart = async (queryParam: TParam, numPages: number) => {
+			const pages: TData[] = [];
+			let cursor: TCursor | undefined = undefined;
 
 			for (let i = 0; i < numPages; i++) {
-				const loadResult = await loadData(
-					queryParam,
-					cacheKey,
-					i === 0 ? 'load' : 'more',
-					newData
-				);
+				const loadResult = await loadFn(queryParam, cursor);
 				if (!loadResult.success) return loadResult;
-				newData = loadResult.data;
+
+				pages.push(loadResult.data);
+				cursor = loadResult.cursor;
+				if (cursor === undefined) break;
 			}
 
-			return {
-				success: true as const,
-				data: newData
-			};
+			return { success: true as const, data: pages, cursor };
 		};
 
 		// State
@@ -213,20 +178,45 @@ export function createSequentialQuery<
 					const queryLoaderWithParam = async (mode?: QueryLoadMode) => {
 						withLoading(
 							cacheKey,
-							() => {
-								switch (mode) {
-									case 'more':
-										return loadData(
-											frozenQueryParam,
-											cacheKey,
-											mode,
-											dataByKey[cacheKey] as TData[] | undefined
-										);
-									case 'reload':
-										return loadData(frozenQueryParam, cacheKey, mode);
-									default:
-										return reloadAllPages(frozenQueryParam, cacheKey);
+							async () => {
+								// Load the next page and append it to the current data
+								if (mode === 'more') {
+									const currentData = dataByKey[cacheKey] as
+										| TData[]
+										| undefined;
+									const cursor = cursorByKey[cacheKey] as TCursor | undefined;
+
+									const loadResult = await loadFn(frozenQueryParam, cursor);
+									if (!loadResult.success) return loadResult;
+
+									cursorByKey[cacheKey] = loadResult.cursor;
+									hasMoreByKey[cacheKey] = loadResult.cursor !== undefined;
+									return {
+										success: true as const,
+										data: [...(currentData ?? []), loadResult.data]
+									};
 								}
+
+								// Reload only the first page ('reload'), or all current
+								// pages (initial load and invalidation)
+								const numPages =
+									mode === 'reload'
+										? 1
+										: ((dataByKey[cacheKey] as TData[] | undefined)?.length ??
+											1);
+
+								const loadResult = await loadPagesFromStart(
+									frozenQueryParam,
+									numPages
+								);
+								if (!loadResult.success) return loadResult;
+
+								// Cursor and hasMore are only updated after all pages have
+								// loaded, so a failed reload leaves them consistent with
+								// the (kept) previous data
+								cursorByKey[cacheKey] = loadResult.cursor;
+								hasMoreByKey[cacheKey] = loadResult.cursor !== undefined;
+								return { success: true as const, data: loadResult.data };
 							},
 							options?.staleTime ?? Infinity,
 							mode !== undefined
@@ -274,6 +264,8 @@ export function createSequentialQuery<
 			},
 			loadMore: () => {
 				if (!isEnabled()) return;
+				// There is nothing more to load
+				if (hasMoreByKey[internalState.currentKey] === false) return;
 				queryLoaderByKey[internalState.currentKey]?.('more');
 			},
 			reload: () => {
