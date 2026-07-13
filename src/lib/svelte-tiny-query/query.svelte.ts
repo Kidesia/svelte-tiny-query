@@ -187,10 +187,12 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 				return isLoading === undefined ? true : isLoading;
 			},
 			get data() {
-				return (
-					(dataByKey[internalState.currentKey] as TData | undefined) ??
-					options?.initialData
-				);
+				const currentKey = internalState.currentKey;
+				// "in" instead of "??", so that null/undefined data does not
+				// fall back to initialData once the query has loaded
+				return currentKey in dataByKey
+					? (dataByKey[currentKey] as TData)
+					: options?.initialData;
 			},
 			get error() {
 				return errorByKey[internalState.currentKey] as TError | undefined;

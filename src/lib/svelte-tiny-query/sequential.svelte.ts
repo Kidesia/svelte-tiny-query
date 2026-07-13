@@ -248,10 +248,12 @@ export function createSequentialQuery<
 				return isLoading === undefined ? true : isLoading;
 			},
 			get data() {
-				return (
-					(dataByKey[internalState.currentKey] as TData[] | undefined) ??
-					options?.initialData
-				);
+				const currentKey = internalState.currentKey;
+				// "in" instead of "??", so that pages of null/undefined data do
+				// not fall back to initialData once the query has loaded
+				return currentKey in dataByKey
+					? (dataByKey[currentKey] as TData[])
+					: options?.initialData;
 			},
 			get hasMore() {
 				return loadingByKey[internalState.currentKey]
