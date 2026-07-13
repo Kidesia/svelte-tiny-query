@@ -87,11 +87,12 @@ The key of a query has to uniquely identify the data that the query produces, so
 
 Invoke the query function **at the top level of your component** — not inside `$derived`, `$effect`, `{#each}` mappings or template expressions. The invocation registers effects, so it needs to run during component initialization. The library warns in the console when it detects a violation of this rule.
 
-This also means the query state should not be destructured (destructuring would freeze the values). Access the properties on the returned object instead:
+This also means the query state should not be destructured into plain variables — like with any reactive object, destructuring captures a one-time snapshot. Access the properties on the returned object, or wrap it in `$derived` to destructure:
 
 ```typescript
 const query = useMemeIdea(() => currentId);
 // ✅ query.data, query.loading, query.error
+// ✅ const { data, loading } = $derived(query);
 // ❌ const { data, loading } = useMemeIdea(() => currentId);
 ```
 
