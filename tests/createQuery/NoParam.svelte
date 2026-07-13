@@ -13,11 +13,15 @@
 		suffix?: string;
 		states: { value: unknown[] };
 		key: string[];
-		loadingFn: () => Promise<LoadResult<unknown, unknown>>;
+		loadingFn: (
+			param: void,
+			signal: AbortSignal
+		) => Promise<LoadResult<unknown, unknown>>;
 		queryOptions?: {
 			staleTime?: number;
 			initialData?: unknown;
 			gcTime?: number;
+			retry?: number;
 		};
 	} = $props();
 

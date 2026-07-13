@@ -73,12 +73,14 @@ export function createSequentialQuery<
 	key: string[] | ((queryParam: TParam) => string[]),
 	loadFn: (
 		queryParam: TParam,
-		cursor?: TCursor
+		cursor: TCursor | undefined,
+		signal: AbortSignal
 	) => Promise<SequentialLoadResult<TData, TCursor, TError>>,
 	options: {
 		initialData: TData[];
 		staleTime?: number;
 		gcTime?: number;
+		retry?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -94,12 +96,14 @@ export function createSequentialQuery<
 	key: string[] | ((queryParam: TParam) => string[]),
 	loadFn: (
 		queryParam: TParam,
-		cursor?: TCursor
+		cursor: TCursor | undefined,
+		signal: AbortSignal
 	) => Promise<SequentialLoadResult<TData, TCursor, TError>>,
 	options?: {
 		initialData?: TData[];
 		staleTime?: number;
 		gcTime?: number;
+		retry?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -115,12 +119,14 @@ export function createSequentialQuery<
 	key: string[] | ((queryParam: TParam) => string[]),
 	loadFn: (
 		queryParam: TParam,
-		cursor?: TCursor
+		cursor: TCursor | undefined,
+		signal: AbortSignal
 	) => Promise<SequentialLoadResult<TData, TCursor, TError>>,
 	options?: {
 		initialData?: TData[];
 		staleTime?: number;
 		gcTime?: number;
+		retry?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -136,13 +142,19 @@ export function createSequentialQuery<
 		// Helpers
 
 		// Loads pages sequentially from the start (up to numPages), stopping
-		// early when there is no more data
-		const loadPagesFromStart = async (queryParam: TParam, numPages: number) => {
+		// early when there is no more data or the load was cancelled
+		const loadPagesFromStart = async (
+			queryParam: TParam,
+			numPages: number,
+			signal: AbortSignal
+		) => {
 			const pages: TData[] = [];
 			let cursor: TCursor | undefined = undefined;
 
 			for (let i = 0; i < numPages; i++) {
-				const loadResult = await loadFn(queryParam, cursor);
+				if (signal.aborted) break;
+
+				const loadResult = await loadFn(queryParam, cursor, signal);
 				if (!loadResult.success) return loadResult;
 
 				pages.push(loadResult.data);
@@ -181,7 +193,7 @@ export function createSequentialQuery<
 					const queryLoaderWithParam = async (mode?: QueryLoadMode) => {
 						withLoading(
 							cacheKey,
-							async () => {
+							async (signal) => {
 								// Load the next page and append it to the current data
 								if (mode === 'more') {
 									const currentData = dataByKey[cacheKey] as
@@ -189,8 +201,18 @@ export function createSequentialQuery<
 										| undefined;
 									const cursor = cursorByKey[cacheKey] as TCursor | undefined;
 
-									const loadResult = await loadFn(frozenQueryParam, cursor);
+									const loadResult = await loadFn(
+										frozenQueryParam,
+										cursor,
+										signal
+									);
 									if (!loadResult.success) return loadResult;
+
+									// A cancelled load must not touch cursor or hasMore; the
+									// returned value is discarded by withLoading anyway
+									if (signal.aborted) {
+										return { success: true as const, data: [] as TData[] };
+									}
 
 									cursorByKey[cacheKey] = loadResult.cursor;
 									hasMoreByKey[cacheKey] = loadResult.cursor !== undefined;
@@ -210,9 +232,10 @@ export function createSequentialQuery<
 
 								const loadResult = await loadPagesFromStart(
 									frozenQueryParam,
-									numPages
+									numPages,
+									signal
 								);
-								if (!loadResult.success) return loadResult;
+								if (!loadResult.success || signal.aborted) return loadResult;
 
 								// Cursor and hasMore are only updated after all pages have
 								// loaded, so a failed reload leaves them consistent with
@@ -222,7 +245,8 @@ export function createSequentialQuery<
 								return { success: true as const, data: loadResult.data };
 							},
 							options?.staleTime ?? Infinity,
-							mode !== undefined
+							mode !== undefined,
+							options?.retry
 						);
 					};
 

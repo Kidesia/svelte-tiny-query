@@ -112,11 +112,15 @@ Svelte Tiny Query exports the query constructors `createQuery` and `createSequen
 ```typescript
 function createQuery<TError, TParam, TData>(
   key: string[] | ((param: TParam) => string[]),
-  loadFn: (param: TParam) => Promise<LoadResult<TData, TError>>,
+  loadFn: (
+    param: TParam,
+    signal: AbortSignal
+  ) => Promise<LoadResult<TData, TError>>,
   options?: {
     initialData?: TData;
     staleTime?: number;
     gcTime?: number;
+    retry?: number;
   }
 ): (
   param?: TParam | (() => TParam),
@@ -133,7 +137,8 @@ The **key** identifies the data of the query in the global cache. It must be uni
 #### Param 2: Loading Function
 
 ```typescript
-loadFn: (param: TParam) => Promise<LoadResult<TData, TError>>;
+loadFn: (param: TParam, signal: AbortSignal) =>
+  Promise<LoadResult<TData, TError>>;
 ```
 
 An asynchronous function that produces the data or an error. It receives the current value of the query parameter. The returned `LoadResult` is either:
@@ -143,6 +148,8 @@ An asynchronous function that produces the data or an error. It receives the cur
 
 You can use the helpers `succeed(data)` and `fail(error)` to construct these values. Note that the loading function is expected to **return** errors, not throw them — wrap throwing code in `try`/`catch`.
 
+The loading function also receives an `AbortSignal`, which is aborted when the library cancels the load (currently, this happens when the query is invalidated while loading). You can pass the signal to `fetch` to abort the request over the network — but even if you ignore it, the result of a cancelled load is always discarded.
+
 #### Param 3: Options (optional)
 
 - **staleTime**: How long (in milliseconds) the loaded data stays fresh. A query whose data is fresh is not automatically reloaded when it is used again. Defaults to `0` (using a query always reloads it). Set it to `Infinity` to never reload automatically.
@@ -150,6 +157,8 @@ You can use the helpers `succeed(data)` and `fail(error)` to construct these val
 - **initialData**: Used as the value of `data` before the query has first loaded (instead of `undefined`). When provided, the type of `query.data` is narrowed from `TData | undefined` to `TData`. Can be used to implement persisted queries.
 
 - **gcTime**: Enables garbage collection for the query: its cached state is evicted `gcTime` milliseconds after the query is both **unused** (not part of any mounted component) and **stale**. Fresh data is never collected — with `staleTime: Infinity`, the cache is kept forever, so set that deliberately. Using the query again cancels a pending eviction. If `gcTime` is not set, cached data is kept for the lifetime of the app. You rarely need this — set it on queries whose parameter space is unbounded (search input, per-item detail views), where distinct cache keys accumulate over a session.
+
+- **retry**: How many times a failed load is retried before the error is stored. Defaults to `0` (no retries). Retries use exponential backoff (1s, 2s, 4s, … capped at 30s). Retrying is invisible from the outside: the query simply stays in its loading state, and only the final error is exposed.
 
 #### Return: The Query Function
 
@@ -187,12 +196,14 @@ function createSequentialQuery<TError, TParam, TData, TCursor>(
   key: string[] | ((param: TParam) => string[]),
   loadFn: (
     param: TParam,
-    cursor?: TCursor
+    cursor: TCursor | undefined,
+    signal: AbortSignal
   ) => Promise<SequentialLoadResult<TData, TCursor, TError>>,
   options?: {
     initialData?: TData[];
     staleTime?: number;
     gcTime?: number;
+    retry?: number;
   }
 ): (
   param?: TParam | (() => TParam),
@@ -261,6 +272,8 @@ function invalidateQueries(
 ```
 
 Invalidates all queries whose key starts with the given key. Invalidated queries are marked as stale, and those that are **active** (currently used in a mounted component) reload immediately. If multiple components use an invalidated query, its loading function only runs once.
+
+If a matching query is loading while it is invalidated, the in-flight load is **cancelled** (its signal is aborted and its result is discarded) and a fresh load starts, so responses that predate the invalidation are never stored as fresh data.
 
 - **exact**: Only invalidate the query with exactly this key, not queries with child keys.
 - **force**: Additionally clear the cached data right away. Active queries lose their `data` until the reload finishes (no stale-while-revalidate).
@@ -346,8 +359,7 @@ Version 2 changed how parameters are passed to queries:
 
 While we want to keep the library _tiny_, there are a few things on our plate:
 
-- Retries on error
-- Query cancellation
+- Manual query cancellation and cancel-on-unmount
 - Stabilize optimistic updates (`updateQueryData`)
 
 ## Thanks

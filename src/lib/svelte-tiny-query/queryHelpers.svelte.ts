@@ -8,6 +8,7 @@ import {
 	dataByKey,
 	queryLoaderByKey,
 	evictionTimerByKey,
+	abortControllerByKey,
 	cursorByKey,
 	hasMoreByKey
 } from './cache.svelte';
@@ -113,9 +114,10 @@ function evictIfUnusedAndStale(cacheKey: string, gcTime: number) {
 
 export async function withLoading<TData, TError>(
 	key: string,
-	loadFn: () => Promise<LoadResult<TData, TError>>,
+	loadFn: (signal: AbortSignal) => Promise<LoadResult<TData, TError>>,
 	staleTime = 0,
-	force = false
+	force = false,
+	retry = 0
 ) {
 	// Skip if this query is already loading (loads are never concurrent per
 	// key, not even when forced) or if it still has fresh data (unless forced)
@@ -130,8 +132,30 @@ export async function withLoading<TData, TError>(
 	errorByKey[key] = undefined;
 	loadingByKey[key] = true;
 
-	// Run the query function and store results
-	const loadResult = await loadFn();
+	// The signal allows cancelLoad to abort this load. A cancelled load
+	// discards its result completely and leaves all state untouched (the
+	// canceller has already taken care of the loading flag)
+	const controller = new AbortController();
+	abortControllerByKey[key] = controller;
+	const { signal } = controller;
+
+	// Run the query function, retrying failures with exponential backoff.
+	// Only the final result is stored: while retrying, the query simply
+	// stays in its loading state and intermediate errors are not exposed
+	let loadResult = await loadFn(signal);
+	for (let attempt = 0; !loadResult.success && attempt < retry; attempt++) {
+		if (signal.aborted) return;
+		await sleep(Math.min(1000 * 2 ** attempt, 30_000));
+		if (signal.aborted) return;
+		loadResult = await loadFn(signal);
+	}
+
+	if (signal.aborted) return;
+	if (abortControllerByKey[key] === controller) {
+		delete abortControllerByKey[key];
+	}
+
+	// Store the result
 	if (loadResult.success) {
 		dataByKey[key] = loadResult.data;
 		loadedTimeStampByKey[key] = Date.now();
@@ -142,4 +166,25 @@ export async function withLoading<TData, TError>(
 
 	// Mark the query as no longer loading
 	loadingByKey[key] = false;
+}
+
+/**
+ * Cancels the in-flight load of a query (if any). The load's result is
+ * discarded, so no data, error or timestamps of the cancelled load are
+ * ever stored.
+ */
+export function cancelLoad(key: string) {
+	const controller = abortControllerByKey[key];
+	if (!controller) return;
+
+	controller.abort();
+	delete abortControllerByKey[key];
+
+	// The cancelled load will not touch any state, so the loading flag
+	// is reset here (a follow-up load can start right away)
+	loadingByKey[key] = false;
+}
+
+function sleep(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }

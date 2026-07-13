@@ -674,6 +674,70 @@ describe('Sequential Query - No Parameter', () => {
 		expect(callCount).toBe(3);
 	});
 
+	test('Invalidation during loadMore discards the page and reloads all pages', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		type Page = { success: true; data: number[]; cursor: number };
+		let pendingMoreResolve: ((page: Page) => void) | undefined;
+		let loadCount = 0;
+		const mockLoadingFn = vi.fn((_: void, cursor: number = 0) => {
+			loadCount++;
+			// The second call is the loadMore we keep in flight
+			if (loadCount === 2) {
+				return new Promise<Page>((resolve) => {
+					pendingMoreResolve = resolve;
+				});
+			}
+			return Promise.resolve({
+				success: true as const,
+				data: [cursor + loadCount * 100],
+				cursor: cursor + 10
+			});
+		});
+
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['cancel-load-more-test'],
+				loadingFn: mockLoadingFn
+			}
+		});
+
+		// First page loads (call 1)
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[100]]')).toBeInTheDocument();
+		});
+
+		// Start a loadMore that stays in flight (call 2)
+		rendered.queryByText('Load More')?.click();
+		await vi.advanceTimersByTimeAsync(0);
+		expect(mockLoadingFn).toHaveBeenCalledTimes(2);
+
+		// Invalidate while the loadMore is in flight: it is cancelled and
+		// all pages reload (call 3, one current page)
+		invalidateQueries(['cancel-load-more-test']);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(mockLoadingFn).toHaveBeenCalledTimes(3);
+
+		// The cancelled loadMore resolves — its page must be discarded
+		pendingMoreResolve?.({ success: true, data: [999], cursor: 99 });
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[300]]')).toBeInTheDocument();
+		});
+		expect(rendered.queryByText('Data: [[100],[999]]')).not.toBeInTheDocument();
+
+		// The cursor comes from the reload, not the cancelled loadMore:
+		// loading more continues from cursor 10 (call 4)
+		rendered.queryByText('Load More')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: [[300],[410]]')).toBeInTheDocument();
+		});
+
+		rendered.unmount();
+	});
+
 	test('loadMore does nothing when there is no more data', async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));

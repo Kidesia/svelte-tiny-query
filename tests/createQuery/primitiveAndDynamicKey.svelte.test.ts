@@ -128,7 +128,7 @@ describe('Normal Query - Dynamic Key Function', () => {
 		});
 
 		expect(mockLoadingFn).toHaveBeenCalledTimes(2);
-		expect(mockLoadingFn).toHaveBeenCalledWith(1);
-		expect(mockLoadingFn).toHaveBeenCalledWith(2);
+		expect(mockLoadingFn).toHaveBeenCalledWith(1, expect.any(AbortSignal));
+		expect(mockLoadingFn).toHaveBeenCalledWith(2, expect.any(AbortSignal));
 	});
 });
