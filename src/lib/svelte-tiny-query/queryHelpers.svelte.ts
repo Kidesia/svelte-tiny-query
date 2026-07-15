@@ -139,33 +139,67 @@ export async function withLoading<TData, TError>(
 	abortControllerByKey[key] = controller;
 	const { signal } = controller;
 
-	// Run the query function, retrying failures with exponential backoff.
-	// Only the final result is stored: while retrying, the query simply
-	// stays in its loading state and intermediate errors are not exposed
-	let loadResult = await loadFn(signal);
-	for (let attempt = 0; !loadResult.success && attempt < retry; attempt++) {
-		if (signal.aborted) return;
-		await sleep(Math.min(1000 * 2 ** attempt, 30_000));
-		if (signal.aborted) return;
-		loadResult = await loadFn(signal);
-	}
+	try {
+		// Run the query function, retrying failures with exponential backoff.
+		// Only the final result is stored: while retrying, the query simply
+		// stays in its loading state and intermediate errors are not exposed
+		let loadResult = await loadFn(signal);
+		for (let attempt = 0; !loadResult.success && attempt < retry; attempt++) {
+			if (signal.aborted) return;
+			await sleep(Math.min(1000 * 2 ** attempt, 30_000));
+			if (signal.aborted) return;
+			loadResult = await loadFn(signal);
+		}
 
-	if (signal.aborted) return;
-	if (abortControllerByKey[key] === controller) {
-		delete abortControllerByKey[key];
-	}
+		if (signal.aborted) return;
+		if (abortControllerByKey[key] === controller) {
+			delete abortControllerByKey[key];
+		}
 
-	// Store the result
-	if (loadResult.success) {
-		dataByKey[key] = loadResult.data;
-		loadedTimeStampByKey[key] = Date.now();
-		staleTimeStampByKey[key] = Date.now() + staleTime;
+		// Store the result
+		if (loadResult.success) {
+			dataByKey[key] = loadResult.data;
+			loadedTimeStampByKey[key] = Date.now();
+			staleTimeStampByKey[key] = Date.now() + staleTime;
+		} else {
+			errorByKey[key] = loadResult.error;
+		}
+
+		// Mark the query as no longer loading
+		loadingByKey[key] = false;
+	} catch (defect) {
+		// A cancelled load may throw (e.g. an aborted fetch): not a defect,
+		// the canceller has already taken care of the state
+		if (signal.aborted) return;
+
+		// A throwing loading function is a defect, not an expected error:
+		// loading functions must return errors (via fail), so query.error
+		// stays typed as TError and is left untouched. Recover the loading
+		// machinery and report the defect to the global error handlers,
+		// where monitoring tools (and the console) pick it up.
+		if (abortControllerByKey[key] === controller) {
+			delete abortControllerByKey[key];
+		}
+		loadingByKey[key] = false;
+
+		console.error(
+			`svelte-tiny-query (${key}): the loading function threw instead of ` +
+				'returning a failure. Return fail(error) for expected errors.'
+		);
+		reportDefect(defect);
+	}
+}
+
+// Surfaces a defect as an uncaught error (window.onerror and friends),
+// so error monitoring tools see it without the query getting stuck
+function reportDefect(defect: unknown) {
+	if (typeof reportError === 'function') {
+		reportError(defect);
 	} else {
-		errorByKey[key] = loadResult.error;
+		setTimeout(() => {
+			throw defect;
+		});
 	}
-
-	// Mark the query as no longer loading
-	loadingByKey[key] = false;
 }
 
 /**

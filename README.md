@@ -146,7 +146,7 @@ An asynchronous function that produces the data or an error. It receives the cur
 - `{ success: true, data: TData }`
 - `{ success: false, error: TError }`
 
-You can use the helpers `succeed(data)` and `fail(error)` to construct these values. Note that the loading function is expected to **return** errors, not throw them — wrap throwing code in `try`/`catch`.
+You can use the helpers `succeed(data)` and `fail(error)` to construct these values. Note that the loading function is expected to **return** errors, not throw them — wrap throwing code in `try`/`catch`. If it throws anyway, that is treated as a defect (a bug, not an expected error): the query recovers (`loading` resets, `data` and `error` stay untouched), and the exception is reported to the global error handlers via `reportError`, where monitoring tools like Sentry pick it up.
 
 The loading function also receives an `AbortSignal`, which is aborted when the library cancels the load (currently, this happens when the query is invalidated while loading). You can pass the signal to `fetch` to abort the request over the network — but even if you ignore it, the result of a cancelled load is always discarded.
 

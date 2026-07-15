@@ -958,6 +958,55 @@ describe('Normal Query - No Parameter', () => {
 		expect(activeQueryCounts['unmount-cleanup-test']).toBeUndefined();
 	});
 
+	test('Recovers from a throwing loading function (defect)', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const reportSpy = vi.fn();
+		vi.stubGlobal('reportError', reportSpy);
+
+		const defect = new Error('boom');
+		let call = 0;
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['defect-test'],
+				loadingFn: async () => {
+					call++;
+					if (call === 1) throw defect;
+					return { success: true, data: 'recovered' };
+				}
+			}
+		});
+
+		// The defect resets loading, but touches neither data nor error
+		await waitFor(() => {
+			expect(rendered.queryByText('Loading: false')).toBeInTheDocument();
+		});
+		expect(rendered.queryByText('Error:')).toBeInTheDocument();
+		expect(rendered.queryByText('Data:')).toBeInTheDocument();
+
+		// The defect was reported to the console and the global handlers
+		expect(errorSpy).toHaveBeenCalledWith(
+			expect.stringContaining('threw instead of returning a failure')
+		);
+		expect(reportSpy).toHaveBeenCalledWith(defect);
+
+		// The query is not stuck: reloading works again
+		rendered.queryByText('Reload')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: recovered')).toBeInTheDocument();
+		});
+
+		vi.unstubAllGlobals();
+		errorSpy.mockRestore();
+		rendered.unmount();
+		vi.useRealTimers();
+	});
+
 	test('Warns when query function is called inside $derived', async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
