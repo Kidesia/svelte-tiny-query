@@ -10,7 +10,11 @@ const config = {
 
 	kit: {
 		// The docs page is a fully prerendered static site (see src/routes)
-		adapter: adapter()
+		adapter: adapter(),
+		paths: {
+			// On GitHub Pages, the site is served under /svelte-tiny-query
+			base: process.env.BASE_PATH ?? ''
+		}
 	},
 
 	extensions: ['.svelte', '.svx', '.md']
