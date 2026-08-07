@@ -66,7 +66,10 @@ export function createQuery<
 	TData = unknown
 >(
 	key: string[] | ((queryParam: TParam) => string[]),
-	loadFn: (queryParam: TParam) => Promise<LoadResult<TData, TError>>,
+	loadFn: (
+		queryParam: TParam,
+		signal: AbortSignal
+	) => Promise<LoadResult<TData, TError>>,
 	options: {
 		/**
 		 * Initial data to be used before the query is loaded.
@@ -85,6 +88,13 @@ export function createQuery<
 		 * the cache is kept forever). If not set, cached data is never evicted.
 		 */
 		gcTime?: number;
+		/**
+		 * How many times a failed load is retried (with exponential backoff)
+		 * before the error is stored. While retrying, the query stays in its
+		 * loading state and intermediate errors are not exposed.
+		 * Defaults to 0 (no retries).
+		 */
+		retry?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -110,7 +120,10 @@ export function createQuery<
 	TData = unknown
 >(
 	key: string[] | ((queryParam: TParam) => string[]),
-	loadFn: (queryParam: TParam) => Promise<LoadResult<TData, TError>>,
+	loadFn: (
+		queryParam: TParam,
+		signal: AbortSignal
+	) => Promise<LoadResult<TData, TError>>,
 	options?: {
 		/**
 		 * Initial data to be used before the query is loaded.
@@ -129,6 +142,13 @@ export function createQuery<
 		 * the cache is kept forever). If not set, cached data is never evicted.
 		 */
 		gcTime?: number;
+		/**
+		 * How many times a failed load is retried (with exponential backoff)
+		 * before the error is stored. While retrying, the query stays in its
+		 * loading state and intermediate errors are not exposed.
+		 * Defaults to 0 (no retries).
+		 */
+		retry?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -137,11 +157,15 @@ export function createQuery<
 
 export function createQuery<TData, TError, TParam extends QueryParam = void>(
 	key: string[] | ((queryParam: TParam) => string[]),
-	loadFn: (queryParam: TParam) => Promise<LoadResult<TData, TError>>,
+	loadFn: (
+		queryParam: TParam,
+		signal: AbortSignal
+	) => Promise<LoadResult<TData, TError>>,
 	options?: {
 		initialData?: TData;
 		staleTime?: number;
 		gcTime?: number;
+		retry?: number;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -182,10 +206,12 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 					untrack(() => {
 						withLoading(
 							cacheKey,
-							() => {
-								return loadFn(frozenParam);
+							(signal) => {
+								return loadFn(frozenParam, signal);
 							},
-							options?.staleTime
+							options?.staleTime,
+							false,
+							options?.retry
 						);
 					});
 				};

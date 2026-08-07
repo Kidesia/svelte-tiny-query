@@ -12,6 +12,8 @@ export const evictionTimerByKey = {} as Record<
 	ReturnType<typeof setTimeout>
 >;
 
+export const abortControllerByKey = {} as Record<string, AbortController>;
+
 // Query State
 
 export const loadingByKey = $state({} as Record<string, boolean>);

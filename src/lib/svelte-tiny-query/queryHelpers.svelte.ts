@@ -8,6 +8,7 @@ import {
 	dataByKey,
 	queryLoaderByKey,
 	evictionTimerByKey,
+	abortControllerByKey,
 	cursorByKey,
 	hasMoreByKey
 } from './cache.svelte';
@@ -113,9 +114,10 @@ function evictIfUnusedAndStale(cacheKey: string, gcTime: number) {
 
 export async function withLoading<TData, TError>(
 	key: string,
-	loadFn: () => Promise<LoadResult<TData, TError>>,
+	loadFn: (signal: AbortSignal) => Promise<LoadResult<TData, TError>>,
 	staleTime = 0,
-	force = false
+	force = false,
+	retry = 0
 ) {
 	// Skip if this query is already loading (loads are never concurrent per
 	// key, not even when forced) or if it still has fresh data (unless forced)
@@ -130,16 +132,93 @@ export async function withLoading<TData, TError>(
 	errorByKey[key] = undefined;
 	loadingByKey[key] = true;
 
-	// Run the query function and store results
-	const loadResult = await loadFn();
-	if (loadResult.success) {
-		dataByKey[key] = loadResult.data;
-		loadedTimeStampByKey[key] = Date.now();
-		staleTimeStampByKey[key] = Date.now() + staleTime;
-	} else {
-		errorByKey[key] = loadResult.error;
-	}
+	// The signal allows cancelLoad to abort this load. A cancelled load
+	// discards its result completely and leaves all state untouched (the
+	// canceller has already taken care of the loading flag)
+	const controller = new AbortController();
+	abortControllerByKey[key] = controller;
+	const { signal } = controller;
 
-	// Mark the query as no longer loading
+	try {
+		// Run the query function, retrying failures with exponential backoff.
+		// Only the final result is stored: while retrying, the query simply
+		// stays in its loading state and intermediate errors are not exposed
+		let loadResult = await loadFn(signal);
+		for (let attempt = 0; !loadResult.success && attempt < retry; attempt++) {
+			if (signal.aborted) return;
+			await sleep(Math.min(1000 * 2 ** attempt, 30_000));
+			if (signal.aborted) return;
+			loadResult = await loadFn(signal);
+		}
+
+		if (signal.aborted) return;
+		if (abortControllerByKey[key] === controller) {
+			delete abortControllerByKey[key];
+		}
+
+		// Store the result
+		if (loadResult.success) {
+			dataByKey[key] = loadResult.data;
+			loadedTimeStampByKey[key] = Date.now();
+			staleTimeStampByKey[key] = Date.now() + staleTime;
+		} else {
+			errorByKey[key] = loadResult.error;
+		}
+
+		// Mark the query as no longer loading
+		loadingByKey[key] = false;
+	} catch (defect) {
+		// A cancelled load may throw (e.g. an aborted fetch): not a defect,
+		// the canceller has already taken care of the state
+		if (signal.aborted) return;
+
+		// A throwing loading function is a defect, not an expected error:
+		// loading functions must return errors (via fail), so query.error
+		// stays typed as TError and is left untouched. Recover the loading
+		// machinery and report the defect to the global error handlers,
+		// where monitoring tools (and the console) pick it up.
+		if (abortControllerByKey[key] === controller) {
+			delete abortControllerByKey[key];
+		}
+		loadingByKey[key] = false;
+
+		console.error(
+			`svelte-tiny-query (${key}): the loading function threw instead of ` +
+				'returning a failure. Return fail(error) for expected errors.'
+		);
+		reportDefect(defect);
+	}
+}
+
+// Surfaces a defect as an uncaught error (window.onerror and friends),
+// so error monitoring tools see it without the query getting stuck
+function reportDefect(defect: unknown) {
+	if (typeof reportError === 'function') {
+		reportError(defect);
+	} else {
+		setTimeout(() => {
+			throw defect;
+		});
+	}
+}
+
+/**
+ * Cancels the in-flight load of a query (if any). The load's result is
+ * discarded, so no data, error or timestamps of the cancelled load are
+ * ever stored.
+ */
+export function cancelLoad(key: string) {
+	const controller = abortControllerByKey[key];
+	if (!controller) return;
+
+	controller.abort();
+	delete abortControllerByKey[key];
+
+	// The cancelled load will not touch any state, so the loading flag
+	// is reset here (a follow-up load can start right away)
 	loadingByKey[key] = false;
+}
+
+function sleep(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }

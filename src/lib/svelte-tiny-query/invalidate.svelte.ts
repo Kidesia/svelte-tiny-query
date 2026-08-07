@@ -6,9 +6,11 @@ import {
 	loadedTimeStampByKey,
 	staleTimeStampByKey,
 	activeQueryCounts,
+	abortControllerByKey,
 	hasMoreByKey,
 	cursorByKey
 } from './cache.svelte';
+import { cancelLoad } from './queryHelpers.svelte';
 import { KEY_SEPARATOR } from './utils.js';
 
 /**
@@ -36,6 +38,14 @@ export function invalidateQueries(
 	Object.keys(staleTimeStampByKey).forEach((key) => {
 		if (matches(key)) {
 			staleTimeStampByKey[key] = Date.now() - 1;
+		}
+	});
+
+	// Cancel matching in-flight loads: their responses predate the
+	// invalidation and must not be stored as fresh data
+	Object.keys(abortControllerByKey).forEach((key) => {
+		if (matches(key)) {
+			cancelLoad(key);
 		}
 	});
 

@@ -7,6 +7,7 @@ import NoParam from './NoParam.svelte';
 import MultipleNoParam from './MultipleNoParam.svelte';
 import TripleNoParam from './TripleNoParam.svelte';
 import MisusedInDerived from './MisusedInDerived.svelte';
+import DerivedDestructure from './DerivedDestructure.svelte';
 import WithEnabled from './WithEnabled.svelte';
 
 describe('Normal Query - No Parameter', () => {
@@ -956,6 +957,122 @@ describe('Normal Query - No Parameter', () => {
 
 		// Count should be removed (deleted when 0)
 		expect(activeQueryCounts['unmount-cleanup-test']).toBeUndefined();
+	});
+
+	test('Recovers from a throwing loading function (defect)', async () => {
+		vi.useFakeTimers();
+		const mockDate = new Date(2025, 5, 11, 12, 0, 0);
+		vi.setSystemTime(mockDate);
+
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const reportSpy = vi.fn();
+		vi.stubGlobal('reportError', reportSpy);
+
+		const defect = new Error('boom');
+		let call = 0;
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['defect-test'],
+				loadingFn: async () => {
+					call++;
+					if (call === 1) throw defect;
+					return { success: true, data: 'recovered' };
+				}
+			}
+		});
+
+		// The defect resets loading, but touches neither data nor error
+		await waitFor(() => {
+			expect(rendered.queryByText('Loading: false')).toBeInTheDocument();
+		});
+		expect(rendered.queryByText('Error:')).toBeInTheDocument();
+		expect(rendered.queryByText('Data:')).toBeInTheDocument();
+
+		// The defect was reported to the console and the global handlers
+		expect(errorSpy).toHaveBeenCalledWith(
+			expect.stringContaining('threw instead of returning a failure')
+		);
+		expect(reportSpy).toHaveBeenCalledWith(defect);
+
+		// The query is not stuck: reloading works again
+		rendered.queryByText('Reload')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: recovered')).toBeInTheDocument();
+		});
+
+		vi.unstubAllGlobals();
+		errorSpy.mockRestore();
+		rendered.unmount();
+		vi.useRealTimers();
+	});
+
+	test('Query state can be destructured when wrapped in $derived', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		let call = 0;
+		const rendered = render(DerivedDestructure, {
+			props: {
+				key: ['derived-destructure-test'],
+				loadingFn: async (param: number) => {
+					call++;
+					return call === 4
+						? { success: false, error: 'oopsie' }
+						: { success: true, data: `payload ${param}-${call}` };
+				}
+			}
+		});
+
+		// The destructured bindings stay reactive through the initial load
+		expect(rendered.queryByText('Loading: true')).toBeInTheDocument();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: payload 1-1')).toBeInTheDocument();
+			expect(rendered.queryByText('Loading: false')).toBeInTheDocument();
+		});
+
+		// ...and through several reloads (regression: destructured state
+		// used to look reactive at first but go stale after a few loads)
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Reload')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: payload 1-2')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Reload')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: payload 1-3')).toBeInTheDocument();
+		});
+
+		// ...including a load that errors (data is kept, error appears)
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Reload')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Error: oopsie')).toBeInTheDocument();
+			expect(rendered.queryByText('Data: payload 1-3')).toBeInTheDocument();
+		});
+
+		// ...and through a param change (key switch) plus another reload
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Next Param')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: payload 2-5')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+		rendered.queryByText('Reload')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: payload 2-6')).toBeInTheDocument();
+		});
+
+		// The query function itself was never invoked in a reactive context
+		expect(warnSpy).not.toHaveBeenCalled();
+
+		warnSpy.mockRestore();
 	});
 
 	test('Warns when query function is called inside $derived', async () => {
