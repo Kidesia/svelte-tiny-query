@@ -2,12 +2,16 @@
 
 Define declarative queries that handle caching, deduping and reloading, and help you simplify your codebase. Built on **Svelte 5's reactivity**, it's _tiny_ (~2kB gzipped) and fully type-safe.
 
+Check out the [**interactive docs**](https://kidesia.github.io/svelte-tiny-query/) with live demos of every feature.
+
 **Features**
 
 - 🚀 Declarative and reactive queries
-- 💾 Caching and stale-time support
+- 💾 Caching, stale times and cache eviction
 - 👬 Deduplication of identical loads
 - 🚧 Query invalidation from anywhere
+- 🔁 Retries with exponential backoff
+- 🚫 Cancellation of in-flight loads
 - 📜 Sequential queries (pagination, load-more)
 - 🐍 Written in TypeScript
 
