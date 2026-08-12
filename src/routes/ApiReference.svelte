@@ -19,6 +19,11 @@
   | string | number | boolean | bigint | symbol
   | null | undefined | Date | RegExp
   | QueryParam[] | { [key: string]: QueryParam };`,
+		QueryPersister: `type QueryPersister<TData> = {
+  get: (key: string[]) => TData | undefined | Promise<TData | undefined>;
+  set: (key: string[], data: TData) => void | Promise<void>;
+  remove: (key: string[]) => void | Promise<void>;
+};`,
 		SequentialLoadResult: `type SequentialLoadResult<TData, TCursor, TError> =
   | { success: true; data: TData; cursor: TCursor | undefined }
   | { success: false; error: TError };`,
@@ -40,7 +45,8 @@
 	const createQueryType = `function createQuery<TError, TParam extends QueryParam, TData>(
   key: string[] | ((param: TParam) => string[]),
   loadFn: (param: TParam, signal: AbortSignal) => Promise<LoadResult<TData, TError>>,
-  options?: { initialData?: TData; staleTime?: number; gcTime?: number; retry?: number }
+  options?: { initialData?: TData; staleTime?: number; gcTime?: number; retry?: number;
+    persister?: QueryPersister<TData> }
 ): (param?: TParam | (() => TParam), options?: QueryInvokeOptions) => QueryState<TData, TError>;`;
 
 	const sequentialType = `function createSequentialQuery<TError, TParam extends QueryParam, TData, TCursor>(
@@ -268,6 +274,21 @@ query.error; // string | undefined`;
 					Backoff is exponential: 1s, 2s, 4s, … capped at 30s. Retrying is
 					invisible — the query stays in its loading state and only the final
 					result lands.
+				</td>
+			</tr>
+			<tr>
+				<td>persister</td>
+				<td>undefined</td>
+				<td>
+					Persists the query's data outside the in-memory cache, e.g. in
+					<code>localStorage</code>. <code>get(key)</code> restores the data of
+					a query that has none cached yet — it is shown right away but counts
+					as stale, so the load still runs. <code>set(key, data)</code> is
+					called with the data of every successful load, and
+					<code>remove(key)</code> when the query is invalidated with
+					<code>force: true</code>. All functions receive the cache key as an
+					array of strings and may be sync or async; serialization is up to the
+					persister.
 				</td>
 			</tr>
 		</tbody>

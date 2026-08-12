@@ -10,10 +10,16 @@ import {
 	evictionTimerByKey,
 	abortControllerByKey,
 	cursorByKey,
-	hasMoreByKey
+	hasMoreByKey,
+	persisterByKey,
+	restoreStartedByKey
 } from './cache.svelte';
 import type { LoadResult } from './loadHelpers.js';
-import { generateCacheKey } from './utils.js';
+import {
+	generateCacheKey,
+	KEY_SEPARATOR,
+	type QueryPersister
+} from './utils.js';
 
 export function warnIfTracking(fnName: string, key: string) {
 	if ($effect.tracking()) {
@@ -110,6 +116,74 @@ function evictIfUnusedAndStale(cacheKey: string, gcTime: number) {
 	delete staleTimeStampByKey[cacheKey];
 	delete cursorByKey[cacheKey];
 	delete hasMoreByKey[cacheKey];
+
+	// The persisted data itself is kept: clearing the restore guard makes
+	// the next use of the query restore it from the persister again
+	delete persisterByKey[cacheKey];
+	delete restoreStartedByKey[cacheKey];
+}
+
+// A failing persister must never break the query itself, so all persister
+// calls are wrapped and failures are only reported to the console
+function safePersist(
+	cacheKey: string,
+	operation: 'get' | 'set' | 'remove',
+	fn: () => unknown
+) {
+	const onError = (error: unknown) =>
+		console.error(
+			`svelte-tiny-query (${cacheKey}): the persister's ${operation} function failed.`,
+			error
+		);
+	try {
+		Promise.resolve(fn()).catch(onError);
+	} catch (error) {
+		onError(error);
+	}
+}
+
+/**
+ * Restores persisted data for a query that has no cached data yet
+ * (fire-and-forget). Restored data acts like initial data: it is shown
+ * right away, but the query still counts as never loaded, so the normal
+ * load is not skipped and its data is never overwritten.
+ */
+export function restorePersistedData(
+	cacheKey: string,
+	persister: QueryPersister<unknown>
+) {
+	if (restoreStartedByKey[cacheKey] || cacheKey in dataByKey) return;
+	restoreStartedByKey[cacheKey] = true;
+
+	safePersist(cacheKey, 'get', () =>
+		Promise.resolve(persister.get(cacheKey.split(KEY_SEPARATOR))).then(
+			(restored) => {
+				// Undefined means no persisted data. A load that finished in the
+				// meantime always wins, and a cleared guard (eviction or forced
+				// invalidation) means the restored data is outdated by now
+				if (
+					restored === undefined ||
+					!restoreStartedByKey[cacheKey] ||
+					cacheKey in dataByKey
+				) {
+					return;
+				}
+				dataByKey[cacheKey] = restored;
+			}
+		)
+	);
+}
+
+/**
+ * Removes the persisted data of a query (fire-and-forget).
+ */
+export function removePersistedData(
+	cacheKey: string,
+	persister: QueryPersister<unknown>
+) {
+	safePersist(cacheKey, 'remove', () =>
+		persister.remove(cacheKey.split(KEY_SEPARATOR))
+	);
 }
 
 export async function withLoading<TData, TError>(
@@ -117,7 +191,8 @@ export async function withLoading<TData, TError>(
 	loadFn: (signal: AbortSignal) => Promise<LoadResult<TData, TError>>,
 	staleTime = 0,
 	force = false,
-	retry = 0
+	retry = 0,
+	persister?: QueryPersister<TData>
 ) {
 	// Skip if this query is already loading (loads are never concurrent per
 	// key, not even when forced) or if it still has fresh data (unless forced)
@@ -161,6 +236,13 @@ export async function withLoading<TData, TError>(
 			dataByKey[key] = loadResult.data;
 			loadedTimeStampByKey[key] = Date.now();
 			staleTimeStampByKey[key] = Date.now() + staleTime;
+
+			if (persister) {
+				const { data } = loadResult;
+				safePersist(key, 'set', () =>
+					persister.set(key.split(KEY_SEPARATOR), data)
+				);
+			}
 		} else {
 			errorByKey[key] = loadResult.error;
 		}

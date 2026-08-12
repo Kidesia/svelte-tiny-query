@@ -8,9 +8,11 @@ import {
 	activeQueryCounts,
 	abortControllerByKey,
 	hasMoreByKey,
-	cursorByKey
+	cursorByKey,
+	persisterByKey,
+	restoreStartedByKey
 } from './cache.svelte';
-import { cancelLoad } from './queryHelpers.svelte';
+import { cancelLoad, removePersistedData } from './queryHelpers.svelte';
 import { KEY_SEPARATOR } from './utils.js';
 
 /**
@@ -53,6 +55,20 @@ export function invalidateQueries(
 	// is cleared separately, so that queries which only ever produced an
 	// error (and thus have no data entry) are also fully reset.
 	if (options?.force) {
+		// Also remove the persisted data of matching queries (only reaches
+		// queries whose persister was registered this session). Clearing the
+		// restore guards discards in-flight restores as outdated.
+		Object.entries(persisterByKey).forEach(([key, persister]) => {
+			if (matches(key)) {
+				removePersistedData(key, persister);
+			}
+		});
+		Object.keys(restoreStartedByKey).forEach((key) => {
+			if (matches(key)) {
+				delete restoreStartedByKey[key];
+			}
+		});
+
 		const records = [
 			loadingByKey,
 			dataByKey,
