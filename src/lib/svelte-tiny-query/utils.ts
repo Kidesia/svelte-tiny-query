@@ -6,6 +6,21 @@ export const KEY_SEPARATOR = '\x1F';
 
 export type QueryLoadMode = 'more' | 'reload' | 'load';
 
+/**
+ * Persists query data outside the in-memory cache (e.g. in localStorage
+ * or IndexedDB). All functions receive the cache key of the query as an
+ * array of segments and may be synchronous or asynchronous. Serialization
+ * of the data is up to the persister.
+ */
+export type QueryPersister<TData> = {
+	/** Reads the persisted data for a key (`undefined` means no data). */
+	get: (key: string[]) => TData | undefined | Promise<TData | undefined>;
+	/** Persists the data of a successful load for a key. */
+	set: (key: string[], data: TData) => void | Promise<void>;
+	/** Removes the persisted data for a key. */
+	remove: (key: string[]) => void | Promise<void>;
+};
+
 /** Values that are valid as query parameters (i.e. serializable for cache keys). */
 export type QueryParam =
 	| void

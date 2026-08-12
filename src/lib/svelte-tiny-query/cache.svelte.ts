@@ -1,4 +1,4 @@
-import type { QueryLoadMode } from './utils.js';
+import type { QueryLoadMode, QueryPersister } from './utils.js';
 
 // Non-Reactive State
 
@@ -6,6 +6,10 @@ export const queryLoaderByKey = {} as Record<
 	string,
 	(mode?: QueryLoadMode) => Promise<void>
 >;
+
+export const persisterByKey = {} as Record<string, QueryPersister<unknown>>;
+
+export const restoreStartedByKey = {} as Record<string, boolean>;
 
 export const evictionTimerByKey = {} as Record<
 	string,

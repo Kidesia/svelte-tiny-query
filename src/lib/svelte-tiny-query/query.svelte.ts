@@ -1,11 +1,17 @@
 import { untrack } from 'svelte';
 
 import type { LoadResult } from './loadHelpers.js';
-import { generateCacheKey, normalizeParam, type QueryParam } from './utils.js';
+import {
+	generateCacheKey,
+	normalizeParam,
+	type QueryParam,
+	type QueryPersister
+} from './utils.js';
 import {
 	warnIfTracking,
 	trackActiveQueriesCount,
-	withLoading
+	withLoading,
+	restorePersistedData
 } from './queryHelpers.svelte';
 import {
 	queryLoaderByKey,
@@ -13,7 +19,8 @@ import {
 	dataByKey,
 	errorByKey,
 	loadedTimeStampByKey,
-	staleTimeStampByKey
+	staleTimeStampByKey,
+	persisterByKey
 } from './cache.svelte';
 
 /**
@@ -95,6 +102,14 @@ export function createQuery<
 		 * Defaults to 0 (no retries).
 		 */
 		retry?: number;
+		/**
+		 * Persists the query data outside the in-memory cache (e.g. in
+		 * localStorage). `get` restores the data of a query that has none
+		 * cached yet (shown while the first load runs, without preventing
+		 * it), `set` is called with the data of every successful load, and
+		 * `remove` when the query is invalidated with `force: true`.
+		 */
+		persister?: QueryPersister<TData>;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -149,6 +164,14 @@ export function createQuery<
 		 * Defaults to 0 (no retries).
 		 */
 		retry?: number;
+		/**
+		 * Persists the query data outside the in-memory cache (e.g. in
+		 * localStorage). `get` restores the data of a query that has none
+		 * cached yet (shown while the first load runs, without preventing
+		 * it), `set` is called with the data of every successful load, and
+		 * `remove` when the query is invalidated with `force: true`.
+		 */
+		persister?: QueryPersister<TData>;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -166,6 +189,7 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
+		persister?: QueryPersister<TData>;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -200,6 +224,14 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 			// Set the new cache key in the internal state
 			internalState.currentKey = cacheKey;
 
+			// Register the persister and restore persisted data (if any).
+			// Untracked, because the restore reads the reactive data records
+			if (options?.persister) {
+				const persister = options.persister as QueryPersister<unknown>;
+				persisterByKey[cacheKey] = persister;
+				untrack(() => restorePersistedData(cacheKey, persister));
+			}
+
 			if (!queryLoaderByKey[cacheKey]) {
 				// Create and store the query loader if it doesn't exist
 				queryLoaderByKey[cacheKey] = async () => {
@@ -211,7 +243,8 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 							},
 							options?.staleTime,
 							false,
-							options?.retry
+							options?.retry,
+							options?.persister
 						);
 					});
 				};

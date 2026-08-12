@@ -13,6 +13,7 @@ Check out the [**interactive docs**](https://kidesia.github.io/svelte-tiny-query
 - 🔁 Retries with exponential backoff
 - 🚫 Cancellation of in-flight loads
 - 📜 Sequential queries (pagination, load-more)
+- 📦 Per-query persistence (localStorage & co)
 - 🐍 Written in TypeScript
 
 ## Usage
@@ -126,6 +127,7 @@ function createQuery<TError, TParam, TData>(
     staleTime?: number;
     gcTime?: number;
     retry?: number;
+    persister?: QueryPersister<TData>;
   }
 ): (
   param?: TParam | (() => TParam),
@@ -159,11 +161,27 @@ The loading function also receives an `AbortSignal`, which is aborted when the l
 
 - **staleTime**: How long (in milliseconds) the loaded data stays fresh. A query whose data is fresh is not automatically reloaded when it is used again. Defaults to `0` (using a query always reloads it). Set it to `Infinity` to never reload automatically.
 
-- **initialData**: Used as the value of `data` before the query has first loaded (instead of `undefined`). When provided, the type of `query.data` is narrowed from `TData | undefined` to `TData`. Can be used to implement persisted queries.
+- **initialData**: Used as the value of `data` before the query has first loaded (instead of `undefined`). When provided, the type of `query.data` is narrowed from `TData | undefined` to `TData`. Useful for precomputed data — for persisted data, see `persister` below.
 
 - **gcTime**: Enables garbage collection for the query: its cached state is evicted `gcTime` milliseconds after the query is both **unused** (not part of any mounted component) and **stale**. Fresh data is never collected — with `staleTime: Infinity`, the cache is kept forever, so set that deliberately. Using the query again cancels a pending eviction. If `gcTime` is not set, cached data is kept for the lifetime of the app. You rarely need this — set it on queries whose parameter space is unbounded (search input, per-item detail views), where distinct cache keys accumulate over a session.
 
 - **retry**: How many times a failed load is retried before the error is stored. Defaults to `0` (no retries). Retries use exponential backoff (1s, 2s, 4s, … capped at 30s). Retrying is invisible from the outside: the query simply stays in its loading state, and only the final error is exposed.
+
+- **persister**: Persists the query's data outside the in-memory cache, e.g. in `localStorage`. `get(key)` restores the data of a query that has none cached yet: the restored data is shown right away, but does not prevent the load (restored data always counts as stale). `set(key, data)` is called with the data of every successful load, and `remove(key)` when the query is invalidated with `force: true`. All three functions receive the cache key as an array of strings and may be sync or async. Serialization is up to the persister, and its failures are logged to the console without ever breaking the query. Note that `updateQueryData` does not persist — only actual loads do.
+
+  ```typescript
+  const useMemeIdea = createQuery(['meme-idea'], loadMemeIdea, {
+    persister: {
+      get: (key) => {
+        const raw = localStorage.getItem(key.join('/'));
+        return raw ? JSON.parse(raw) : undefined;
+      },
+      set: (key, data) =>
+        localStorage.setItem(key.join('/'), JSON.stringify(data)),
+      remove: (key) => localStorage.removeItem(key.join('/'))
+    }
+  });
+  ```
 
 #### Return: The Query Function
 
@@ -344,9 +362,6 @@ Use `$effect`, `setInterval` (or `addEventListener`) and `reload` to achieve thi
 
 **Dependent Queries**<br />
 Use the `enabled` option to only load a query when its prerequisites are ready.
-
-**Persisted Queries**<br />
-Use `initialData` to inject persisted data into the query.
 
 **Mutations**<br />
 Mutations can just be normal functions. Use `invalidateQueries` (or the experimental `updateQueryData`) to update queries after a mutation.

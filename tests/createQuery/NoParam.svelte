@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { createQuery, type LoadResult } from '../../src/lib/index.ts';
+	import {
+		createQuery,
+		type LoadResult,
+		type QueryPersister
+	} from '../../src/lib/index.ts';
 	import { captureState } from '../testHelpers.ts';
 
 	let {
@@ -22,6 +26,7 @@
 			initialData?: unknown;
 			gcTime?: number;
 			retry?: number;
+			persister?: QueryPersister<unknown>;
 		};
 	} = $props();
 
