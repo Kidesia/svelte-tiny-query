@@ -11,7 +11,7 @@ import {
 	cursorByKey,
 	metaByKey
 } from './cache.svelte';
-import { cancelLoad } from './queryHelpers.svelte';
+import { cancelLoad, reportDefect } from './queryHelpers.svelte';
 import { KEY_SEPARATOR } from './utils.js';
 
 /** A cached query, as passed to the predicate of `invalidateQueriesWhere`. */
@@ -50,7 +50,7 @@ export function invalidateQueries(
  * Invalidates all queries for which the predicate returns true, e.g. based on
  * the metadata derived by their `meta` option.
  * This will cause the matching queries to be reloaded if they are currently active.
- * @param predicate Decides whether a cached query is invalidated. It is called at most once per cache entry.
+ * @param predicate Decides whether a cached query is invalidated. It is called at most once per cache entry. If it throws, the entry is not invalidated.
  * @param options Options for invalidation
  * @param options.force If true, resets the cache data of the matching queries right away.
  * @returns void
@@ -60,14 +60,34 @@ export function invalidateQueriesWhere(
 	options?: { force?: boolean }
 ) {
 	const resultByKey = new Map<string, boolean>();
+	let defectReported = false;
+
+	// A throwing predicate is a defect: the entry is not invalidated, and the
+	// first exception of the call is reported
+	const evaluate = (candidate: string) => {
+		try {
+			return predicate({
+				key: candidate.split(KEY_SEPARATOR),
+				meta: metaByKey[candidate]
+			});
+		} catch (defect) {
+			if (!defectReported) {
+				defectReported = true;
+				console.error(
+					`svelte-tiny-query (${candidate}): the predicate of ` +
+						'invalidateQueriesWhere threw. Entries for which it throws ' +
+						'are not invalidated.'
+				);
+				reportDefect(defect);
+			}
+			return false;
+		}
+	};
 
 	const matches = (candidate: string) => {
 		let result = resultByKey.get(candidate);
 		if (result === undefined) {
-			result = predicate({
-				key: candidate.split(KEY_SEPARATOR),
-				meta: metaByKey[candidate]
-			});
+			result = evaluate(candidate);
 			resultByKey.set(candidate, result);
 		}
 		return result;

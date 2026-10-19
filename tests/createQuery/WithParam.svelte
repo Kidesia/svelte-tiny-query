@@ -10,7 +10,7 @@
 		queryOptions
 	}: {
 		states: { value: unknown[] };
-		key: string[];
+		key: string[] | ((param: { id: number }) => string[]);
 		loadingFn: (param: { id: number }) => Promise<LoadResult<unknown, unknown>>;
 		queryOptions?: {
 			staleTime?: number;

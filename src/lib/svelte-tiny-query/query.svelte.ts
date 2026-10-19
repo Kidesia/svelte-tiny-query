@@ -5,7 +5,8 @@ import { generateCacheKey, normalizeParam, type QueryParam } from './utils.js';
 import {
 	warnIfTracking,
 	trackActiveQueriesCount,
-	withLoading
+	withLoading,
+	storeMeta
 } from './queryHelpers.svelte';
 import {
 	queryLoaderByKey,
@@ -197,7 +198,7 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 		warnIfTracking('createQuery', internalState.currentKey);
 
 		// Register the active query (and unregister later)
-		trackActiveQueriesCount(key, getParam, options?.gcTime, options?.meta);
+		trackActiveQueriesCount(key, getParam, options?.gcTime);
 
 		$effect(() => {
 			// Track enabled reactively — if disabled, skip loading
@@ -212,6 +213,11 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 			internalState.currentKey = cacheKey;
 
 			if (!queryLoaderByKey[cacheKey]) {
+				const deriveMeta = options?.meta;
+				if (deriveMeta) {
+					storeMeta(cacheKey, () => deriveMeta(frozenParam));
+				}
+
 				// Create and store the query loader if it doesn't exist
 				queryLoaderByKey[cacheKey] = async () => {
 					untrack(() => {

@@ -20,7 +20,8 @@ import {
 import {
 	warnIfTracking,
 	trackActiveQueriesCount,
-	withLoading
+	withLoading,
+	storeMeta
 } from './queryHelpers.svelte';
 
 // Types
@@ -176,7 +177,7 @@ export function createSequentialQuery<
 
 		warnIfTracking('createSequentialQuery', internalState.currentKey);
 
-		trackActiveQueriesCount(key, getParam, options?.gcTime, options?.meta);
+		trackActiveQueriesCount(key, getParam, options?.gcTime);
 
 		$effect(() => {
 			// Track enabled reactively — if disabled, skip loading
@@ -193,6 +194,11 @@ export function createSequentialQuery<
 
 				// Create and store the query loader if it doesn't exist
 				if (!queryLoaderByKey[cacheKey]) {
+					const deriveMeta = options?.meta;
+					if (deriveMeta) {
+						storeMeta(cacheKey, () => deriveMeta(frozenQueryParam));
+					}
+
 					const queryLoaderWithParam = async (mode?: QueryLoadMode) => {
 						withLoading(
 							cacheKey,

@@ -14,7 +14,11 @@ export const evictionTimerByKey = {} as Record<
 
 export const abortControllerByKey = {} as Record<string, AbortController>;
 
-export const metaByKey = {} as Record<string, Record<string, unknown>>;
+// Without a prototype, keys like 'constructor' do not resolve to inherited members
+export const metaByKey = Object.create(null) as Record<
+	string,
+	Record<string, unknown>
+>;
 
 // Query State
 

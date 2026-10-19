@@ -1,14 +1,21 @@
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte/svelte5';
 
 import { invalidateQueriesWhere } from '../../src/lib/svelte-tiny-query/invalidate.svelte';
 import {
+	activeQueryCounts,
 	dataByKey,
 	metaByKey
 } from '../../src/lib/svelte-tiny-query/cache.svelte';
 import NoParam from '../createQuery/NoParam.svelte';
 import WithParam from '../createQuery/WithParam.svelte';
 import SequentialWithParam from '../createSequentialQuery/WithParam.svelte';
+
+afterEach(() => {
+	vi.useRealTimers();
+	vi.unstubAllGlobals();
+	vi.restoreAllMocks();
+});
 
 describe('invalidateQueriesWhere', () => {
 	test('invalidates only the queries whose meta matches', async () => {
@@ -233,7 +240,139 @@ describe('invalidateQueriesWhere', () => {
 		vi.advanceTimersByTime(5000);
 
 		expect('where-eviction' in metaByKey).toBe(false);
+	});
 
-		vi.useRealTimers();
+	test('derives the meta from the same param as the loader', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const states = $state({ value: [] });
+		const rendered = render(WithParam, {
+			props: {
+				states,
+				// The key ignores the param, so all params share one cache entry
+				key: () => ['where-shared-key'],
+				loadingFn: async (param: { id: number }) => ({
+					success: true,
+					data: `id${param.id}`
+				}),
+				queryOptions: { meta: (param: { id: number }) => ({ id: param.id }) }
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: id1')).toBeInTheDocument();
+		});
+
+		rendered.queryByText('Increment')?.click();
+		await waitFor(() => {
+			expect(rendered.queryByText('Loading: false')).toBeInTheDocument();
+		});
+
+		// The cached data still belongs to the first param, and so does the meta
+		expect(rendered.queryByText('Data: id1')).toBeInTheDocument();
+		expect(metaByKey['where-shared-key']).toEqual({ id: 1 });
+	});
+
+	test('caches a query without meta if its meta function throws', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const reportSpy = vi.fn();
+		vi.stubGlobal('reportError', reportSpy);
+
+		const defect = new Error('meta boom');
+		const states = $state({ value: [] });
+		const rendered = render(NoParam, {
+			props: {
+				states,
+				key: ['where-meta-throws'],
+				loadingFn: async () => ({ success: true, data: 'loaded' }),
+				queryOptions: {
+					meta: () => {
+						throw defect;
+					}
+				}
+			}
+		});
+
+		await waitFor(() => {
+			expect(rendered.queryByText('Data: loaded')).toBeInTheDocument();
+		});
+
+		expect('where-meta-throws' in metaByKey).toBe(false);
+		expect(activeQueryCounts['where-meta-throws']).toBe(1);
+		expect(errorSpy).toHaveBeenCalledWith(
+			expect.stringContaining('the meta function threw')
+		);
+		expect(reportSpy).toHaveBeenCalledWith(defect);
+	});
+
+	test('does not invalidate entries for which the predicate throws', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const reportSpy = vi.fn();
+		vi.stubGlobal('reportError', reportSpy);
+
+		let withMetaCallCount = 0;
+		let withoutMetaCallCount = 0;
+
+		const withMetaStates = $state({ value: [] });
+		const withoutMetaStates = $state({ value: [] });
+
+		const renderedWithMeta = render(NoParam, {
+			props: {
+				states: withMetaStates,
+				key: ['where-throw-with-meta'],
+				loadingFn: async () => ({
+					success: true,
+					data: `with-${++withMetaCallCount}`
+				}),
+				queryOptions: { meta: () => ({ live: true }) }
+			}
+		});
+
+		const renderedWithoutMeta = render(NoParam, {
+			props: {
+				states: withoutMetaStates,
+				key: ['where-throw-without-meta'],
+				loadingFn: async () => ({
+					success: true,
+					data: `without-${++withoutMetaCallCount}`
+				})
+			}
+		});
+
+		await waitFor(() => {
+			expect(renderedWithMeta.queryByText('Data: with-1')).toBeInTheDocument();
+			expect(
+				renderedWithoutMeta.queryByText('Data: without-1')
+			).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+
+		const defect = new Error('predicate boom');
+		invalidateQueriesWhere((entry) => {
+			if (!entry.meta) throw defect;
+			return entry.meta.live === true;
+		});
+
+		await waitFor(() => {
+			expect(renderedWithMeta.queryByText('Data: with-2')).toBeInTheDocument();
+		});
+
+		expect(withoutMetaCallCount).toBe(1);
+		expect(errorSpy).toHaveBeenCalledTimes(1);
+		expect(reportSpy).toHaveBeenCalledTimes(1);
+		expect(reportSpy).toHaveBeenCalledWith(defect);
+	});
+
+	test('does not resolve inherited object members as meta', () => {
+		expect(metaByKey['constructor']).toBeUndefined();
+		expect(metaByKey['toString']).toBeUndefined();
 	});
 });
