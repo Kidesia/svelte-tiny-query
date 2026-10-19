@@ -536,8 +536,9 @@ query.error; // string | undefined`;
 	<code>true</code>, with the same effects as <code>invalidateQueries</code>
 	(including <code>force</code>). Use it when the key cannot express which
 	queries are affected, e.g. when the server pushes a change for a specific day
-	and group. The predicate is called at most once per cache entry, with the
-	entry's key and the metadata derived by the query's <code>meta</code> option.
+	and group. The predicate is called once per cache entry, with the entry's key
+	and the metadata derived by the query's <code>meta</code> option, before anything
+	is invalidated. If it throws for an entry, that entry is not invalidated.
 </p>
 
 <p>

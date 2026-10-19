@@ -5,7 +5,8 @@ import { invalidateQueriesWhere } from '../../src/lib/svelte-tiny-query/invalida
 import {
 	activeQueryCounts,
 	dataByKey,
-	metaByKey
+	metaByKey,
+	staleTimeStampByKey
 } from '../../src/lib/svelte-tiny-query/cache.svelte';
 import NoParam from '../createQuery/NoParam.svelte';
 import WithParam from '../createQuery/WithParam.svelte';
@@ -369,6 +370,62 @@ describe('invalidateQueriesWhere', () => {
 		expect(errorSpy).toHaveBeenCalledTimes(1);
 		expect(reportSpy).toHaveBeenCalledTimes(1);
 		expect(reportSpy).toHaveBeenCalledWith(defect);
+	});
+
+	test('leaves the cache untouched while the predicate runs', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 11, 12, 0, 0));
+
+		let callCount = 0;
+		const firstStates = $state({ value: [] });
+		const secondStates = $state({ value: [] });
+
+		const renderedFirst = render(NoParam, {
+			props: {
+				states: firstStates,
+				key: ['where-upfront-first'],
+				loadingFn: async () => ({
+					success: true,
+					data: `first-${++callCount}`
+				}),
+				queryOptions: { meta: () => ({ upfront: true }) }
+			}
+		});
+
+		const renderedSecond = render(NoParam, {
+			props: {
+				states: secondStates,
+				key: ['where-upfront-second'],
+				loadingFn: async () => ({
+					success: true,
+					data: `second-${++callCount}`
+				}),
+				queryOptions: { meta: () => ({ upfront: true }) }
+			}
+		});
+
+		await waitFor(() => {
+			expect(renderedFirst.queryByText('Data: first-1')).toBeInTheDocument();
+			expect(renderedSecond.queryByText('Data: second-2')).toBeInTheDocument();
+		});
+
+		vi.advanceTimersByTime(1000);
+
+		const staleBefore = { ...staleTimeStampByKey };
+		let cacheChanged = false;
+		invalidateQueriesWhere((entry) => {
+			cacheChanged ||= Object.keys(staleBefore).some(
+				(key) => staleTimeStampByKey[key] !== staleBefore[key]
+			);
+			return entry.meta?.upfront === true;
+		});
+
+		expect(cacheChanged).toBe(false);
+
+		await waitFor(() => {
+			expect(renderedFirst.queryByText('Data: first-3')).toBeInTheDocument();
+			expect(renderedSecond.queryByText('Data: second-4')).toBeInTheDocument();
+		});
 	});
 
 	test('does not resolve inherited object members as meta', () => {

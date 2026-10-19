@@ -314,7 +314,7 @@ type QueryEntry = {
 };
 ```
 
-Invalidates all cached queries for which the predicate returns `true`, with the same effects as `invalidateQueries` (including `force`). Use it when the key cannot express which queries are affected, e.g. when the server pushes a change for a specific day and group. The predicate is called at most once per cache entry, with the entry's key and the metadata derived by the query's `meta` option.
+Invalidates all cached queries for which the predicate returns `true`, with the same effects as `invalidateQueries` (including `force`). Use it when the key cannot express which queries are affected, e.g. when the server pushes a change for a specific day and group. The predicate is called once per cache entry, with the entry's key and the metadata derived by the query's `meta` option, before anything is invalidated. If it throws for an entry, that entry is not invalidated.
 
 ```typescript
 type DayScope = { day: string; groupIds: string[] };

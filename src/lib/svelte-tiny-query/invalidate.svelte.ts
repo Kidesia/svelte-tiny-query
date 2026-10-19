@@ -14,6 +14,17 @@ import {
 import { cancelLoad, reportDefect } from './queryHelpers.svelte';
 import { KEY_SEPARATOR } from './utils.js';
 
+// The records that hold the cached state of a query
+const cachedStateRecords = [
+	loadingByKey,
+	dataByKey,
+	errorByKey,
+	loadedTimeStampByKey,
+	staleTimeStampByKey,
+	hasMoreByKey,
+	cursorByKey
+];
+
 /** A cached query, as passed to the predicate of `invalidateQueriesWhere`. */
 export type QueryEntry = {
 	/** The cache key (for array keys, including the serialized parameter). */
@@ -50,7 +61,7 @@ export function invalidateQueries(
  * Invalidates all queries for which the predicate returns true, e.g. based on
  * the metadata derived by their `meta` option.
  * This will cause the matching queries to be reloaded if they are currently active.
- * @param predicate Decides whether a cached query is invalidated. It is called at most once per cache entry. If it throws, the entry is not invalidated.
+ * @param predicate Decides whether a cached query is invalidated. It is called once per cache entry, before anything is invalidated. If it throws, the entry is not invalidated.
  * @param options Options for invalidation
  * @param options.force If true, resets the cache data of the matching queries right away.
  * @returns void
@@ -59,41 +70,41 @@ export function invalidateQueriesWhere(
 	predicate: (entry: QueryEntry) => boolean,
 	options?: { force?: boolean }
 ) {
-	const resultByKey = new Map<string, boolean>();
-	let defectReported = false;
+	const cacheKeys = new Set(
+		[...cachedStateRecords, abortControllerByKey, activeQueryCounts].flatMap(
+			(record) => Object.keys(record)
+		)
+	);
 
-	// A throwing predicate is a defect: the entry is not invalidated, and the
-	// first exception of the call is reported
-	const evaluate = (candidate: string) => {
+	// Decide for all entries first, so that the cache is left untouched while
+	// the predicate runs
+	const matchingKeys = new Set<string>();
+	let defectReported = false;
+	cacheKeys.forEach((cacheKey) => {
 		try {
-			return predicate({
-				key: candidate.split(KEY_SEPARATOR),
-				meta: metaByKey[candidate]
-			});
+			const entry = {
+				key: cacheKey.split(KEY_SEPARATOR),
+				meta: metaByKey[cacheKey]
+			};
+			if (predicate(entry)) {
+				matchingKeys.add(cacheKey);
+			}
 		} catch (defect) {
+			// A throwing predicate is a defect: the entry is not invalidated,
+			// and the first exception of the call is reported
 			if (!defectReported) {
 				defectReported = true;
 				console.error(
-					`svelte-tiny-query (${candidate}): the predicate of ` +
+					`svelte-tiny-query (${cacheKey}): the predicate of ` +
 						'invalidateQueriesWhere threw. Entries for which it throws ' +
 						'are not invalidated.'
 				);
 				reportDefect(defect);
 			}
-			return false;
 		}
-	};
+	});
 
-	const matches = (candidate: string) => {
-		let result = resultByKey.get(candidate);
-		if (result === undefined) {
-			result = evaluate(candidate);
-			resultByKey.set(candidate, result);
-		}
-		return result;
-	};
-
-	invalidateMatching(matches, options?.force);
+	invalidateMatching((cacheKey) => matchingKeys.has(cacheKey), options?.force);
 }
 
 function invalidateMatching(
@@ -119,16 +130,7 @@ function invalidateMatching(
 	// is cleared separately, so that queries which only ever produced an
 	// error (and thus have no data entry) are also fully reset.
 	if (force) {
-		const records = [
-			loadingByKey,
-			dataByKey,
-			errorByKey,
-			loadedTimeStampByKey,
-			staleTimeStampByKey,
-			hasMoreByKey,
-			cursorByKey
-		];
-		records.forEach((record) => {
+		cachedStateRecords.forEach((record) => {
 			Object.keys(record).forEach((key) => {
 				if (matches(key)) {
 					delete record[key];
