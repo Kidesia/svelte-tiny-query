@@ -51,9 +51,7 @@ describe('invalidateQueriesWhere', () => {
 		});
 
 		vi.advanceTimersByTime(1000);
-		invalidateQueriesWhere(
-			(entry) => (entry.meta as { team: string } | undefined)?.team === 'a'
-		);
+		invalidateQueriesWhere((entry) => entry.meta?.team === 'a');
 
 		await waitFor(() => {
 			expect(renderedTeamA.queryByText('Data: a-2')).toBeInTheDocument();
@@ -96,9 +94,7 @@ describe('invalidateQueriesWhere', () => {
 		});
 
 		vi.advanceTimersByTime(1000);
-		invalidateQueriesWhere(
-			(entry) => (entry.meta as { id: number } | undefined)?.id === 1
-		);
+		invalidateQueriesWhere((entry) => entry.meta?.id === 1);
 
 		// The active entry (id 2) does not match, so nothing reloads
 		expect(callCount).toBe(2);
@@ -164,7 +160,7 @@ describe('invalidateQueriesWhere', () => {
 				states,
 				key: ['where-force'],
 				loadingFn: async () => ({ success: true, data: 'cached' }),
-				queryOptions: { meta: () => 'force-me' }
+				queryOptions: { meta: () => ({ force: true }) }
 			}
 		});
 
@@ -175,7 +171,7 @@ describe('invalidateQueriesWhere', () => {
 		// Unmount, so that force-invalidation does not trigger a reload
 		rendered.unmount();
 
-		invalidateQueriesWhere((entry) => entry.meta === 'force-me', {
+		invalidateQueriesWhere((entry) => entry.meta?.force === true, {
 			force: true
 		});
 
@@ -198,7 +194,7 @@ describe('invalidateQueriesWhere', () => {
 					data: `page-${++callCount}`,
 					cursor: undefined
 				}),
-				queryOptions: { meta: () => 'sequential' }
+				queryOptions: { meta: () => ({ kind: 'sequential' }) }
 			}
 		});
 
@@ -207,7 +203,7 @@ describe('invalidateQueriesWhere', () => {
 		});
 
 		vi.advanceTimersByTime(1000);
-		invalidateQueriesWhere((entry) => entry.meta === 'sequential');
+		invalidateQueriesWhere((entry) => entry.meta?.kind === 'sequential');
 
 		await waitFor(() => {
 			expect(rendered.queryByText('Data: ["page-2"]')).toBeInTheDocument();

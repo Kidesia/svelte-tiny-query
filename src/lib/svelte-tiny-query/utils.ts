@@ -21,18 +21,6 @@ export type QueryParam =
 	| QueryParam[]
 	| { [key: string]: QueryParam };
 
-/**
- * Registers app-wide types via module augmentation, e.g.
- * `declare module 'svelte-tiny-query' { interface Register { queryMeta: MyMeta } }`
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface Register {}
-
-/** The type of query metadata: `unknown`, unless registered via `Register`. */
-export type QueryMeta = Register extends { queryMeta: infer TMeta }
-	? TMeta
-	: unknown;
-
 // Key Helpers
 
 /**

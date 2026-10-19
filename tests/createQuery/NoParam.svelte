@@ -22,7 +22,7 @@
 			initialData?: unknown;
 			gcTime?: number;
 			retry?: number;
-			meta?: () => unknown;
+			meta?: () => object;
 		};
 	} = $props();
 

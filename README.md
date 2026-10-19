@@ -126,7 +126,7 @@ function createQuery<TError, TParam, TData>(
     staleTime?: number;
     gcTime?: number;
     retry?: number;
-    meta?: (param: TParam) => QueryMeta;
+    meta?: (param: TParam) => object;
   }
 ): (
   param?: TParam | (() => TParam),
@@ -212,7 +212,7 @@ function createSequentialQuery<TError, TParam, TData, TCursor>(
     staleTime?: number;
     gcTime?: number;
     retry?: number;
-    meta?: (param: TParam) => QueryMeta;
+    meta?: (param: TParam) => object;
   }
 ): (
   param?: TParam | (() => TParam),
@@ -310,40 +310,39 @@ function invalidateQueriesWhere(
 
 type QueryEntry = {
   key: string[];
-  meta: QueryMeta | undefined;
+  meta: Record<string, unknown> | undefined;
 };
 ```
 
 Invalidates all cached queries for which the predicate returns `true`, with the same effects as `invalidateQueries` (including `force`). Use it when the key cannot express which queries are affected, e.g. when the server pushes a change for a specific day and group. The predicate is called at most once per cache entry, with the entry's key and the metadata derived by the query's `meta` option.
 
 ```typescript
+type DayScope = { day: string; groupIds: string[] };
+
 const useDayPlan = createQuery(
   ['day-plan'],
-  async ({ day, groupIds }: { day: string; groupIds: string[] }) => {
+  async ({ day, groupIds }: DayScope) => {
     // ...
   },
-  { meta: ({ day, groupIds }) => ({ day, groupIds }) }
+  // satisfies catches typos where the meta is created
+  { meta: ({ day, groupIds }) => ({ day, groupIds }) satisfies DayScope }
 );
 
 // e.g. when the server pushes a change
-invalidateQueriesWhere(
-  (entry) =>
-    entry.meta?.day === change.day &&
-    entry.meta.groupIds.some((id) => change.groupIds.includes(id))
-);
+invalidateQueriesWhere((entry) => {
+  const day = entry.meta?.day;
+  const groupIds = entry.meta?.groupIds;
+
+  // without (valid) meta, the query might be affected as well
+  if (typeof day !== 'string' || !Array.isArray(groupIds)) return true;
+
+  return (
+    day === change.day && groupIds.some((id) => change.groupIds.includes(id))
+  );
+});
 ```
 
-Queries without a `meta` option are passed `meta: undefined`, so the predicate decides whether they are affected.
-
-`meta` is typed as `unknown` by default. Register your metadata type once via module augmentation to type both the `meta` option and `entry.meta`:
-
-```typescript
-declare module 'svelte-tiny-query' {
-  interface Register {
-    queryMeta: { day: string; groupIds: string[] };
-  }
-}
-```
+The predicate sees the entries of all queries: those without a `meta` option are passed `meta: undefined`, and others may use a different shape. So the `meta` option may return any object, and the predicate receives it as `Record<string, unknown>`, with fields that are read defensively. To catch mistakes where the meta is created, check it against your own type with `satisfies`.
 
 ### `updateQueryData` (experimental)
 

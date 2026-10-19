@@ -5,7 +5,6 @@ import {
 	generateCacheKey,
 	normalizeParam,
 	type QueryLoadMode,
-	type QueryMeta,
 	type QueryParam
 } from './utils.js';
 import {
@@ -82,7 +81,7 @@ export function createSequentialQuery<
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
-		meta?: (queryParam: TParam) => QueryMeta;
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -106,7 +105,7 @@ export function createSequentialQuery<
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
-		meta?: (queryParam: TParam) => QueryMeta;
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -130,7 +129,7 @@ export function createSequentialQuery<
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
-		meta?: (queryParam: TParam) => QueryMeta;
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),

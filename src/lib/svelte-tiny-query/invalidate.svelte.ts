@@ -12,14 +12,14 @@ import {
 	metaByKey
 } from './cache.svelte';
 import { cancelLoad } from './queryHelpers.svelte';
-import { KEY_SEPARATOR, type QueryMeta } from './utils.js';
+import { KEY_SEPARATOR } from './utils.js';
 
 /** A cached query, as passed to the predicate of `invalidateQueriesWhere`. */
 export type QueryEntry = {
 	/** The cache key (for array keys, including the serialized parameter). */
 	key: string[];
 	/** The metadata derived by the query's `meta` option, if it has one. */
-	meta: QueryMeta | undefined;
+	meta: Record<string, unknown> | undefined;
 };
 
 /**
@@ -66,7 +66,7 @@ export function invalidateQueriesWhere(
 		if (result === undefined) {
 			result = predicate({
 				key: candidate.split(KEY_SEPARATOR),
-				meta: metaByKey[candidate] as QueryMeta | undefined
+				meta: metaByKey[candidate]
 			});
 			resultByKey.set(candidate, result);
 		}

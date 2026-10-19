@@ -14,7 +14,7 @@ export const evictionTimerByKey = {} as Record<
 
 export const abortControllerByKey = {} as Record<string, AbortController>;
 
-export const metaByKey = {} as Record<string, unknown>;
+export const metaByKey = {} as Record<string, Record<string, unknown>>;
 
 // Query State
 

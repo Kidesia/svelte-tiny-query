@@ -1,12 +1,7 @@
 import { untrack } from 'svelte';
 
 import type { LoadResult } from './loadHelpers.js';
-import {
-	generateCacheKey,
-	normalizeParam,
-	type QueryMeta,
-	type QueryParam
-} from './utils.js';
+import { generateCacheKey, normalizeParam, type QueryParam } from './utils.js';
 import {
 	warnIfTracking,
 	trackActiveQueriesCount,
@@ -104,7 +99,7 @@ export function createQuery<
 		 * Derives metadata from the query parameter. It is stored with each
 		 * cache entry and passed to the predicate of `invalidateQueriesWhere`.
 		 */
-		meta?: (queryParam: TParam) => QueryMeta;
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -163,7 +158,7 @@ export function createQuery<
 		 * Derives metadata from the query parameter. It is stored with each
 		 * cache entry and passed to the predicate of `invalidateQueriesWhere`.
 		 */
-		meta?: (queryParam: TParam) => QueryMeta;
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -181,7 +176,7 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
-		meta?: (queryParam: TParam) => QueryMeta;
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),

@@ -34,7 +34,7 @@ export function trackActiveQueriesCount(
 	paramGetter: () => unknown,
 	gcTime?: number,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	meta?: (p: any) => unknown
+	meta?: (p: any) => object
 ) {
 	$effect(() => {
 		const param = paramGetter();
@@ -42,7 +42,10 @@ export function trackActiveQueriesCount(
 
 		untrack(() => {
 			if (meta) {
-				metaByKey[cacheKey] = meta($state.snapshot(param));
+				metaByKey[cacheKey] = meta($state.snapshot(param)) as Record<
+					string,
+					unknown
+				>;
 			}
 
 			// Cancel a pending eviction when the query becomes active again

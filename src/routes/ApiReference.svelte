@@ -19,10 +19,9 @@
   | string | number | boolean | bigint | symbol
   | null | undefined | Date | RegExp
   | QueryParam[] | { [key: string]: QueryParam };`,
-		QueryMeta: `type QueryMeta = unknown; // unless registered via Register`,
 		QueryEntry: `type QueryEntry = {
   key: string[];
-  meta: QueryMeta | undefined;
+  meta: Record<string, unknown> | undefined;
 };`,
 		SequentialLoadResult: `type SequentialLoadResult<TData, TCursor, TError> =
   | { success: true; data: TData; cursor: TCursor | undefined }
@@ -47,7 +46,7 @@
   loadFn: (param: TParam, signal: AbortSignal) => Promise<LoadResult<TData, TError>>,
   options?: {
     initialData?: TData; staleTime?: number; gcTime?: number; retry?: number;
-    meta?: (param: TParam) => QueryMeta;
+    meta?: (param: TParam) => object;
   }
 ): (param?: TParam | (() => TParam), options?: QueryInvokeOptions) => QueryState<TData, TError>;`;
 
@@ -57,7 +56,7 @@
     Promise<SequentialLoadResult<TData, TCursor, TError>>,
   options?: {
     initialData?: TData[]; staleTime?: number; gcTime?: number; retry?: number;
-    meta?: (param: TParam) => QueryMeta;
+    meta?: (param: TParam) => object;
   }
 ): (param?: TParam | (() => TParam), options?: QueryInvokeOptions) => SequentialQueryState<TData, TError>;`;
 
@@ -154,25 +153,25 @@ invalidateQueries(['memes', '7'], { exact: true });
 invalidateQueries(['memes'], { force: true });
 // ...additionally forgets all cached state right away`;
 
-	const invalidateWhereExample = `const useDayPlan = createQuery(
+	const invalidateWhereExample = `type DayScope = { day: string; groupIds: string[] };
+
+const useDayPlan = createQuery(
   ['day-plan'],
   loadDayPlan,
   // derived from the param of each cache entry
-  { meta: ({ day, groupIds }) => ({ day, groupIds }) }
+  { meta: ({ day, groupIds }) => ({ day, groupIds }) satisfies DayScope }
 );
 
 // e.g. when the server pushes a change
-invalidateQueriesWhere(
-  (entry) =>
-    entry.meta?.day === change.day &&
-    entry.meta.groupIds.some((id) => change.groupIds.includes(id))
-);`;
+invalidateQueriesWhere((entry) => {
+  const day = entry.meta?.day;
+  const groupIds = entry.meta?.groupIds;
 
-	const registerExample = `declare module 'svelte-tiny-query' {
-  interface Register {
-    queryMeta: { day: string; groupIds: string[] };
-  }
-}`;
+  // without (valid) meta, the query might be affected as well
+  if (typeof day !== 'string' || !Array.isArray(groupIds)) return true;
+
+  return day === change.day && groupIds.some((id) => change.groupIds.includes(id));
+});`;
 
 	const updateExample = `updateQueryData(['memes', '7'], (current) => ({
   ...(current as Meme),
@@ -536,17 +535,17 @@ query.error; // string | undefined`;
 	queries are affected, e.g. when the server pushes a change for a specific day
 	and group. The predicate is called at most once per cache entry, with the
 	entry's key and the metadata derived by the query's <code>meta</code> option.
-	Queries without <code>meta</code> are passed <code>meta: undefined</code>, so
-	the predicate decides whether they are affected.
 </p>
 
 <p>
-	<code>meta</code> is typed as <code>unknown</code> by default. Register your
-	metadata type once via module augmentation to type both the
-	<code>meta</code> option and <code>entry.meta</code>:
+	The predicate sees the entries of all queries: those without a
+	<code>meta</code> option are passed <code>meta: undefined</code>, and others
+	may use a different shape. So the <code>meta</code> option may return any
+	object, and the predicate receives it as
+	<code>Record&lt;string, unknown&gt;</code>, with fields that are read
+	defensively. To catch mistakes where the meta is created, check it against
+	your own type with <code>satisfies</code>.
 </p>
-
-<CodeBlock code={registerExample} />
 
 <h3 id="api-update">
 	updateQueryData <span class="chip">experimental</span>
