@@ -5,6 +5,7 @@ import {
 	generateCacheKey,
 	normalizeParam,
 	type QueryLoadMode,
+	type QueryMeta,
 	type QueryParam
 } from './utils.js';
 import {
@@ -81,6 +82,7 @@ export function createSequentialQuery<
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
+		meta?: (queryParam: TParam) => QueryMeta;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -104,6 +106,7 @@ export function createSequentialQuery<
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
+		meta?: (queryParam: TParam) => QueryMeta;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -127,6 +130,7 @@ export function createSequentialQuery<
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
+		meta?: (queryParam: TParam) => QueryMeta;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -173,7 +177,7 @@ export function createSequentialQuery<
 
 		warnIfTracking('createSequentialQuery', internalState.currentKey);
 
-		trackActiveQueriesCount(key, getParam, options?.gcTime);
+		trackActiveQueriesCount(key, getParam, options?.gcTime, options?.meta);
 
 		$effect(() => {
 			// Track enabled reactively — if disabled, skip loading

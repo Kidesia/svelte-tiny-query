@@ -10,7 +10,8 @@ import {
 	evictionTimerByKey,
 	abortControllerByKey,
 	cursorByKey,
-	hasMoreByKey
+	hasMoreByKey,
+	metaByKey
 } from './cache.svelte';
 import type { LoadResult } from './loadHelpers.js';
 import { generateCacheKey } from './utils.js';
@@ -31,12 +32,19 @@ export function trackActiveQueriesCount(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	key: string[] | ((p: any) => string[]),
 	paramGetter: () => unknown,
-	gcTime?: number
+	gcTime?: number,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	meta?: (p: any) => unknown
 ) {
 	$effect(() => {
-		const cacheKey = generateCacheKey(key, paramGetter());
+		const param = paramGetter();
+		const cacheKey = generateCacheKey(key, param);
 
 		untrack(() => {
+			if (meta) {
+				metaByKey[cacheKey] = meta($state.snapshot(param));
+			}
+
 			// Cancel a pending eviction when the query becomes active again
 			if (cacheKey in evictionTimerByKey) {
 				clearTimeout(evictionTimerByKey[cacheKey]);
@@ -110,6 +118,7 @@ function evictIfUnusedAndStale(cacheKey: string, gcTime: number) {
 	delete staleTimeStampByKey[cacheKey];
 	delete cursorByKey[cacheKey];
 	delete hasMoreByKey[cacheKey];
+	delete metaByKey[cacheKey];
 }
 
 export async function withLoading<TData, TError>(

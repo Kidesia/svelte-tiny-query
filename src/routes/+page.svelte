@@ -92,6 +92,7 @@ const { data, loading } = $derived(query);`;
 		<a href="#api-createquery">createQuery</a>
 		<a href="#api-sequential">createSequentialQuery</a>
 		<a href="#api-invalidate">invalidateQueries</a>
+		<a href="#api-invalidate-where">invalidateQueriesWhere</a>
 		<a href="#api-update">updateQueryData</a>
 		<a href="#api-queryinfos">queryInfos</a>
 		<span class="group">Links</span>

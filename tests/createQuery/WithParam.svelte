@@ -15,6 +15,7 @@
 		queryOptions?: {
 			staleTime?: number;
 			initialData?: unknown;
+			meta?: (param: { id: number }) => unknown;
 		};
 	} = $props();
 

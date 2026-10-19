@@ -19,6 +19,11 @@
   | string | number | boolean | bigint | symbol
   | null | undefined | Date | RegExp
   | QueryParam[] | { [key: string]: QueryParam };`,
+		QueryMeta: `type QueryMeta = unknown; // unless registered via Register`,
+		QueryEntry: `type QueryEntry = {
+  key: string[];
+  meta: QueryMeta | undefined;
+};`,
 		SequentialLoadResult: `type SequentialLoadResult<TData, TCursor, TError> =
   | { success: true; data: TData; cursor: TCursor | undefined }
   | { success: false; error: TError };`,
@@ -40,19 +45,30 @@
 	const createQueryType = `function createQuery<TError, TParam extends QueryParam, TData>(
   key: string[] | ((param: TParam) => string[]),
   loadFn: (param: TParam, signal: AbortSignal) => Promise<LoadResult<TData, TError>>,
-  options?: { initialData?: TData; staleTime?: number; gcTime?: number; retry?: number }
+  options?: {
+    initialData?: TData; staleTime?: number; gcTime?: number; retry?: number;
+    meta?: (param: TParam) => QueryMeta;
+  }
 ): (param?: TParam | (() => TParam), options?: QueryInvokeOptions) => QueryState<TData, TError>;`;
 
 	const sequentialType = `function createSequentialQuery<TError, TParam extends QueryParam, TData, TCursor>(
   key: string[] | ((param: TParam) => string[]),
   loadFn: (param: TParam, cursor: TCursor | undefined, signal: AbortSignal) =>
     Promise<SequentialLoadResult<TData, TCursor, TError>>,
-  options?: { initialData?: TData[]; staleTime?: number; gcTime?: number; retry?: number }
+  options?: {
+    initialData?: TData[]; staleTime?: number; gcTime?: number; retry?: number;
+    meta?: (param: TParam) => QueryMeta;
+  }
 ): (param?: TParam | (() => TParam), options?: QueryInvokeOptions) => SequentialQueryState<TData, TError>;`;
 
 	const invalidateType = `function invalidateQueries(
   key: string[],
   options?: { force?: boolean; exact?: boolean }
+): void;`;
+
+	const invalidateWhereType = `function invalidateQueriesWhere(
+  predicate: (entry: QueryEntry) => boolean,
+  options?: { force?: boolean }
 ): void;`;
 
 	const updateType = `function updateQueryData(
@@ -137,6 +153,26 @@ invalidateQueries(['memes', '7'], { exact: true });
 
 invalidateQueries(['memes'], { force: true });
 // ...additionally forgets all cached state right away`;
+
+	const invalidateWhereExample = `const useDayPlan = createQuery(
+  ['day-plan'],
+  loadDayPlan,
+  // derived from the param of each cache entry
+  { meta: ({ day, groupIds }) => ({ day, groupIds }) }
+);
+
+// e.g. when the server pushes a change
+invalidateQueriesWhere(
+  (entry) =>
+    entry.meta?.day === change.day &&
+    entry.meta.groupIds.some((id) => change.groupIds.includes(id))
+);`;
+
+	const registerExample = `declare module 'svelte-tiny-query' {
+  interface Register {
+    queryMeta: { day: string; groupIds: string[] };
+  }
+}`;
 
 	const updateExample = `updateQueryData(['memes', '7'], (current) => ({
   ...(current as Meme),
@@ -268,6 +304,16 @@ query.error; // string | undefined`;
 					Backoff is exponential: 1s, 2s, 4s, … capped at 30s. Retrying is
 					invisible — the query stays in its loading state and only the final
 					result lands.
+				</td>
+			</tr>
+			<tr>
+				<td>meta</td>
+				<td>none</td>
+				<td>
+					Derives metadata from the parameter, e.g. the period or the groups the
+					data belongs to. It is stored with each cache entry and passed to the
+					predicate of <code>invalidateQueriesWhere</code>, so queries can be
+					invalidated based on what they contain instead of their key.
 				</td>
 			</tr>
 		</tbody>
@@ -476,6 +522,31 @@ query.error; // string | undefined`;
 	<code>force: true</code>, all cached state (data, errors, timestamps) is
 	forgotten immediately instead of being kept while reloading.
 </p>
+
+<h3 id="api-invalidate-where">invalidateQueriesWhere</h3>
+
+<CodeBlock code={invalidateWhereType} types={TYPE_DEFS} />
+
+<CodeBlock code={invalidateWhereExample} />
+
+<p>
+	Invalidates all cached queries for which the predicate returns
+	<code>true</code>, with the same effects as <code>invalidateQueries</code>
+	(including <code>force</code>). Use it when the key cannot express which
+	queries are affected, e.g. when the server pushes a change for a specific day
+	and group. The predicate is called at most once per cache entry, with the
+	entry's key and the metadata derived by the query's <code>meta</code> option.
+	Queries without <code>meta</code> are passed <code>meta: undefined</code>, so
+	the predicate decides whether they are affected.
+</p>
+
+<p>
+	<code>meta</code> is typed as <code>unknown</code> by default. Register your
+	metadata type once via module augmentation to type both the
+	<code>meta</code> option and <code>entry.meta</code>:
+</p>
+
+<CodeBlock code={registerExample} />
 
 <h3 id="api-update">
 	updateQueryData <span class="chip">experimental</span>

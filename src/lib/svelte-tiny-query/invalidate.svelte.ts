@@ -8,10 +8,19 @@ import {
 	activeQueryCounts,
 	abortControllerByKey,
 	hasMoreByKey,
-	cursorByKey
+	cursorByKey,
+	metaByKey
 } from './cache.svelte';
 import { cancelLoad } from './queryHelpers.svelte';
-import { KEY_SEPARATOR } from './utils.js';
+import { KEY_SEPARATOR, type QueryMeta } from './utils.js';
+
+/** A cached query, as passed to the predicate of `invalidateQueriesWhere`. */
+export type QueryEntry = {
+	/** The cache key (for array keys, including the serialized parameter). */
+	key: string[];
+	/** The metadata derived by the query's `meta` option, if it has one. */
+	meta: QueryMeta | undefined;
+};
 
 /**
  * Invalidates queries based on the provided key.
@@ -34,6 +43,43 @@ export function invalidateQueries(
 			? candidate === cacheKey
 			: candidate === cacheKey || candidate.startsWith(cacheKeyPrefix);
 
+	invalidateMatching(matches, options?.force);
+}
+
+/**
+ * Invalidates all queries for which the predicate returns true, e.g. based on
+ * the metadata derived by their `meta` option.
+ * This will cause the matching queries to be reloaded if they are currently active.
+ * @param predicate Decides whether a cached query is invalidated. It is called at most once per cache entry.
+ * @param options Options for invalidation
+ * @param options.force If true, resets the cache data of the matching queries right away.
+ * @returns void
+ */
+export function invalidateQueriesWhere(
+	predicate: (entry: QueryEntry) => boolean,
+	options?: { force?: boolean }
+) {
+	const resultByKey = new Map<string, boolean>();
+
+	const matches = (candidate: string) => {
+		let result = resultByKey.get(candidate);
+		if (result === undefined) {
+			result = predicate({
+				key: candidate.split(KEY_SEPARATOR),
+				meta: metaByKey[candidate] as QueryMeta | undefined
+			});
+			resultByKey.set(candidate, result);
+		}
+		return result;
+	};
+
+	invalidateMatching(matches, options?.force);
+}
+
+function invalidateMatching(
+	matches: (cacheKey: string) => boolean,
+	force?: boolean
+) {
 	// Mark all matching queries as stale
 	Object.keys(staleTimeStampByKey).forEach((key) => {
 		if (matches(key)) {
@@ -52,7 +98,7 @@ export function invalidateQueries(
 	// Forget all cached state of the matching queries if forced. Each record
 	// is cleared separately, so that queries which only ever produced an
 	// error (and thus have no data entry) are also fully reset.
-	if (options?.force) {
+	if (force) {
 		const records = [
 			loadingByKey,
 			dataByKey,
