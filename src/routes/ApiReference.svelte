@@ -164,13 +164,16 @@ const useDayPlan = createQuery(
 
 // e.g. when the server pushes a change
 invalidateQueriesWhere((entry) => {
-  const day = entry.meta?.day;
-  const groupIds = entry.meta?.groupIds;
+  // queries without meta are not affected
+  if (!entry.meta) return false;
 
-  // without (valid) meta, the query might be affected as well
-  if (typeof day !== 'string' || !Array.isArray(groupIds)) return true;
+  // a missing or malformed field leaves that dimension unscoped
+  const { day, groupIds } = entry.meta;
+  const dayMatches = typeof day !== 'string' || day === change.day;
+  const groupsMatch =
+    !Array.isArray(groupIds) || groupIds.some((id) => change.groupIds.includes(id));
 
-  return day === change.day && groupIds.some((id) => change.groupIds.includes(id));
+  return dayMatches && groupsMatch;
 });`;
 
 	const updateExample = `updateQueryData(['memes', '7'], (current) => ({
