@@ -153,28 +153,17 @@ invalidateQueries(['memes', '7'], { exact: true });
 invalidateQueries(['memes'], { force: true });
 // ...additionally forgets all cached state right away`;
 
-	const invalidateWhereExample = `type DayScope = { day: string; groupIds: string[] };
+	const invalidateWhereExample = `// both loading functions take a day, e.g. '2026-10-19'
+const useDayPlan = createQuery(['day-plan'], loadDayPlan, {
+  meta: (day) => ({ day })
+});
 
-const useDayPlan = createQuery(
-  ['day-plan'],
-  loadDayPlan,
-  // derived from the param of each cache entry
-  { meta: ({ day, groupIds }) => ({ day, groupIds }) satisfies DayScope }
-);
+const useAttendance = createQuery(['attendance'], loadAttendance, {
+  meta: (day) => ({ day })
+});
 
-// e.g. when the server pushes a change
-invalidateQueriesWhere((entry) => {
-  // queries without meta are not affected
-  if (!entry.meta) return false;
-
-  // a missing or malformed field leaves that dimension unscoped
-  const { day, groupIds } = entry.meta;
-  const dayMatches = typeof day !== 'string' || day === change.day;
-  const groupsMatch =
-    !Array.isArray(groupIds) || groupIds.some((id) => change.groupIds.includes(id));
-
-  return dayMatches && groupsMatch;
-});`;
+// e.g. when the server reports a change on a day
+invalidateQueriesWhere((entry) => entry.meta?.day === change.day);`;
 
 	const updateExample = `updateQueryData(['memes', '7'], (current) => ({
   ...(current as Meme),
@@ -535,20 +524,25 @@ query.error; // string | undefined`;
 	Invalidates all cached queries for which the predicate returns
 	<code>true</code>, with the same effects as <code>invalidateQueries</code>
 	(including <code>force</code>). Use it when the key cannot express which
-	queries are affected, e.g. when the server pushes a change for a specific day
-	and group. The predicate is called once per cache entry, with the entry's key
-	and the metadata derived by the query's <code>meta</code> option, before anything
-	is invalidated. If it throws for an entry, that entry is not invalidated.
+	queries are affected. The predicate is called once per cache entry, with the
+	entry's key and the metadata derived by the query's <code>meta</code> option, before
+	anything is invalidated. If it throws for an entry, that entry is not invalidated.
 </p>
 
 <p>
-	The predicate sees the entries of all queries: those without a
-	<code>meta</code> option are passed <code>meta: undefined</code>, and others
-	may use a different shape. So the <code>meta</code> option may return any
-	object, and the predicate receives it as
-	<code>Record&lt;string, unknown&gt;</code>, with fields that are read
-	defensively. To catch mistakes where the meta is created, check it against
-	your own type with <code>satisfies</code>.
+	In the example, both queries hold data for a day, but under different keys.
+	With <code>invalidateQueries</code>, you would have to know and list every
+	affected key; with <code>meta</code>, one call reaches all queries for that
+	day.
+</p>
+
+<p>
+	The predicate sees the entries of all queries, so <code>meta</code> may be
+	missing (for queries without the option) or have a different shape. That is
+	why it is typed as <code>Record&lt;string, unknown&gt; | undefined</code> and
+	read defensively, as <code>entry.meta?.day === change.day</code> does. To
+	catch mistakes where the meta is created, check it against your own type with
+	<code>satisfies</code>.
 </p>
 
 <h3 id="api-update">

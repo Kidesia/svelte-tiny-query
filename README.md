@@ -314,37 +314,25 @@ type QueryEntry = {
 };
 ```
 
-Invalidates all cached queries for which the predicate returns `true`, with the same effects as `invalidateQueries` (including `force`). Use it when the key cannot express which queries are affected, e.g. when the server pushes a change for a specific day and group. The predicate is called once per cache entry, with the entry's key and the metadata derived by the query's `meta` option, before anything is invalidated. If it throws for an entry, that entry is not invalidated.
+Invalidates all cached queries for which the predicate returns `true`, with the same effects as `invalidateQueries` (including `force`). Use it when the key cannot express which queries are affected. The predicate is called once per cache entry, with the entry's key and the metadata derived by the query's `meta` option, before anything is invalidated. If it throws for an entry, that entry is not invalidated.
 
 ```typescript
-type DayScope = { day: string; groupIds: string[] };
-
-const useDayPlan = createQuery(
-  ['day-plan'],
-  async ({ day, groupIds }: DayScope) => {
-    // ...
-  },
-  // satisfies catches typos where the meta is created
-  { meta: ({ day, groupIds }) => ({ day, groupIds }) satisfies DayScope }
-);
-
-// e.g. when the server pushes a change
-invalidateQueriesWhere((entry) => {
-  // queries without meta are not affected
-  if (!entry.meta) return false;
-
-  // a missing or malformed field leaves that dimension unscoped
-  const { day, groupIds } = entry.meta;
-  const dayMatches = typeof day !== 'string' || day === change.day;
-  const groupsMatch =
-    !Array.isArray(groupIds) ||
-    groupIds.some((id) => change.groupIds.includes(id));
-
-  return dayMatches && groupsMatch;
+// both loading functions take a day, e.g. '2026-10-19'
+const useDayPlan = createQuery(['day-plan'], loadDayPlan, {
+  meta: (day) => ({ day })
 });
+
+const useAttendance = createQuery(['attendance'], loadAttendance, {
+  meta: (day) => ({ day })
+});
+
+// e.g. when the server reports a change on a day
+invalidateQueriesWhere((entry) => entry.meta?.day === change.day);
 ```
 
-The predicate sees the entries of all queries: those without a `meta` option are passed `meta: undefined`, and others may use a different shape. So the `meta` option may return any object, and the predicate receives it as `Record<string, unknown>`, with fields that are read defensively. To catch mistakes where the meta is created, check it against your own type with `satisfies`.
+Both queries hold data for a day, but under different keys. With `invalidateQueries`, you would have to know and list every affected key; with `meta`, one call reaches all queries for that day.
+
+The predicate sees the entries of all queries, so `meta` may be missing (for queries without the option) or have a different shape. That is why it is typed as `Record<string, unknown> | undefined` and read defensively, as `entry.meta?.day === change.day` does. To catch mistakes where the meta is created, check it against your own type with `satisfies`.
 
 ### `updateQueryData` (experimental)
 
