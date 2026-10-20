@@ -12,7 +12,7 @@ Check out the [**interactive docs**](https://kidesia.github.io/svelte-tiny-query
 - 🚧 Query invalidation from anywhere
 - 🔁 Retries with exponential backoff
 - 🚫 Cancellation of in-flight loads
-- 📜 Sequential queries (pagination, load-more)
+- 📜 Sequential queries (load-more)
 - 🐍 Written in TypeScript
 
 ## Usage
@@ -102,7 +102,7 @@ const query = useMemeIdea(() => currentId);
 
 ### When does a query load?
 
-A query loads when it is first used, when its key changes (via the parameter), when it is used again and the cached data is stale, when it is invalidated via `invalidateQueries`, and when its `reload` function is called. Identical loads are deduplicated: if five components use the same query with the same key at the same time, the loading function runs once.
+A query loads when it is first used, when its key changes (via the parameter), when it is used again and the cached data is stale, when it is invalidated via `invalidateQueries` or `invalidateQueriesWhere`, and when its `reload` function is called. Identical loads are deduplicated: if five components use the same query with the same key at the same time, the loading function runs once.
 
 ### Server-side rendering
 
@@ -110,7 +110,7 @@ Loading happens in `$effect`, which only runs in the browser. During SSR, querie
 
 ## API Reference
 
-Svelte Tiny Query exports the query constructors `createQuery` and `createSequentialQuery`, the cache tools `invalidateQueries` and `updateQueryData`, the helpers `succeed` and `fail`, and the readonly state `queryInfos`.
+Svelte Tiny Query exports the query constructors `createQuery` and `createSequentialQuery`, the cache tools `invalidateQueries`, `invalidateQueriesWhere` and `updateQueryData`, the helpers `succeed` and `fail`, and the readonly state `queryInfos`.
 
 ### `createQuery`
 
@@ -126,6 +126,7 @@ function createQuery<TError, TParam, TData>(
     staleTime?: number;
     gcTime?: number;
     retry?: number;
+    meta?: (param: TParam) => object;
   }
 ): (
   param?: TParam | (() => TParam),
@@ -164,6 +165,8 @@ The loading function also receives an `AbortSignal`, which is aborted when the l
 - **gcTime**: Enables garbage collection for the query: its cached state is evicted `gcTime` milliseconds after the query is both **unused** (not part of any mounted component) and **stale**. Fresh data is never collected — with `staleTime: Infinity`, the cache is kept forever, so set that deliberately. Using the query again cancels a pending eviction. If `gcTime` is not set, cached data is kept for the lifetime of the app. You rarely need this — set it on queries whose parameter space is unbounded (search input, per-item detail views), where distinct cache keys accumulate over a session.
 
 - **retry**: How many times a failed load is retried before the error is stored. Defaults to `0` (no retries). Retries use exponential backoff (1s, 2s, 4s, … capped at 30s). Retrying is invisible from the outside: the query simply stays in its loading state, and only the final error is exposed.
+
+- **meta**: Derives metadata from the query parameter, e.g. the period or the groups that the data belongs to. It is stored with each cache entry and passed to the predicate of [`invalidateQueriesWhere`](#invalidatequerieswhere), so queries can be invalidated based on what they contain instead of their key.
 
 #### Return: The Query Function
 
@@ -209,6 +212,7 @@ function createSequentialQuery<TError, TParam, TData, TCursor>(
     staleTime?: number;
     gcTime?: number;
     retry?: number;
+    meta?: (param: TParam) => object;
   }
 ): (
   param?: TParam | (() => TParam),
@@ -216,7 +220,7 @@ function createSequentialQuery<TError, TParam, TData, TCursor>(
 ) => SequentialQueryState<TData, TError>;
 ```
 
-A cursor-based query for paginated data ("load more"). The loading function receives the query parameter and the current cursor (`undefined` on the first load), and returns:
+A cursor-based query for load-more lists. The loading function receives the query parameter and the current cursor (`undefined` on the first load), and returns:
 
 - `{ success: true, data: TData, cursor: TCursor | undefined }`
 - `{ success: false, error: TError }`
@@ -296,6 +300,40 @@ invalidateQueries(['meme-ideas'], { force: true });
 
 Note that when using automatic key generation (key as array of strings), the serialized parameter is part of the key: the query `useMemeIdea(() => 1)` with key `['meme-ideas']` is cached under `['meme-ideas', '1']` and can be invalidated with either `['meme-ideas']` or `['meme-ideas', '1']`.
 
+### `invalidateQueriesWhere`
+
+```typescript
+function invalidateQueriesWhere(
+  predicate: (entry: QueryEntry) => boolean,
+  options?: { force?: boolean }
+): void;
+
+type QueryEntry = {
+  key: string[];
+  meta: Record<string, unknown> | undefined;
+};
+```
+
+Invalidates all cached queries for which the predicate returns `true`, with the same effects as `invalidateQueries` (including `force`). Use it when the key cannot express which queries are affected. The predicate is called once per cache entry, with the entry's key and the metadata derived by the query's `meta` option, before anything is invalidated. If it throws for an entry, that entry is not invalidated.
+
+```typescript
+// both loading functions take a day, e.g. '2026-10-19'
+const useDayPlan = createQuery(['day-plan'], loadDayPlan, {
+  meta: (day) => ({ day })
+});
+
+const useAttendance = createQuery(['attendance'], loadAttendance, {
+  meta: (day) => ({ day })
+});
+
+// e.g. when the server reports a change on a day
+invalidateQueriesWhere((entry) => entry.meta?.day === change.day);
+```
+
+Both queries hold data for a day, but under different keys. With `invalidateQueries`, you would have to know and list every affected key; with `meta`, one call reaches all queries for that day.
+
+The predicate sees the entries of all queries, so `meta` may be missing (for queries without the option) or have a different shape. That is why it is typed as `Record<string, unknown> | undefined` and read defensively, as `entry.meta?.day === change.day` does. To catch mistakes where the meta is created, check it against your own type with `satisfies`.
+
 ### `updateQueryData` (experimental)
 
 ```typescript
@@ -349,7 +387,7 @@ Use the `enabled` option to only load a query when its prerequisites are ready.
 Use `initialData` to inject persisted data into the query.
 
 **Mutations**<br />
-Mutations can just be normal functions. Use `invalidateQueries` (or the experimental `updateQueryData`) to update queries after a mutation.
+Mutations can just be normal functions. Use `invalidateQueries` or `invalidateQueriesWhere` (or the experimental `updateQueryData`) to update queries after a mutation.
 
 ## Migrating from 1.x
 

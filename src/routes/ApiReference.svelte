@@ -19,6 +19,10 @@
   | string | number | boolean | bigint | symbol
   | null | undefined | Date | RegExp
   | QueryParam[] | { [key: string]: QueryParam };`,
+		QueryEntry: `type QueryEntry = {
+  key: string[];
+  meta: Record<string, unknown> | undefined;
+};`,
 		SequentialLoadResult: `type SequentialLoadResult<TData, TCursor, TError> =
   | { success: true; data: TData; cursor: TCursor | undefined }
   | { success: false; error: TError };`,
@@ -40,19 +44,30 @@
 	const createQueryType = `function createQuery<TError, TParam extends QueryParam, TData>(
   key: string[] | ((param: TParam) => string[]),
   loadFn: (param: TParam, signal: AbortSignal) => Promise<LoadResult<TData, TError>>,
-  options?: { initialData?: TData; staleTime?: number; gcTime?: number; retry?: number }
+  options?: {
+    initialData?: TData; staleTime?: number; gcTime?: number; retry?: number;
+    meta?: (param: TParam) => object;
+  }
 ): (param?: TParam | (() => TParam), options?: QueryInvokeOptions) => QueryState<TData, TError>;`;
 
 	const sequentialType = `function createSequentialQuery<TError, TParam extends QueryParam, TData, TCursor>(
   key: string[] | ((param: TParam) => string[]),
   loadFn: (param: TParam, cursor: TCursor | undefined, signal: AbortSignal) =>
     Promise<SequentialLoadResult<TData, TCursor, TError>>,
-  options?: { initialData?: TData[]; staleTime?: number; gcTime?: number; retry?: number }
+  options?: {
+    initialData?: TData[]; staleTime?: number; gcTime?: number; retry?: number;
+    meta?: (param: TParam) => object;
+  }
 ): (param?: TParam | (() => TParam), options?: QueryInvokeOptions) => SequentialQueryState<TData, TError>;`;
 
 	const invalidateType = `function invalidateQueries(
   key: string[],
   options?: { force?: boolean; exact?: boolean }
+): void;`;
+
+	const invalidateWhereType = `function invalidateQueriesWhere(
+  predicate: (entry: QueryEntry) => boolean,
+  options?: { force?: boolean }
 ): void;`;
 
 	const updateType = `function updateQueryData(
@@ -138,73 +153,36 @@ invalidateQueries(['memes', '7'], { exact: true });
 invalidateQueries(['memes'], { force: true });
 // ...additionally forgets all cached state right away`;
 
+	const invalidateWhereExample = `// both loading functions take a day, e.g. '2026-10-19'
+const useDayPlan = createQuery(['day-plan'], loadDayPlan, {
+  meta: (day) => ({ day })
+});
+
+const useAttendance = createQuery(['attendance'], loadAttendance, {
+  meta: (day) => ({ day })
+});
+
+// e.g. when the server reports a change on a day
+invalidateQueriesWhere((entry) => entry.meta?.day === change.day);`;
+
 	const updateExample = `updateQueryData(['memes', '7'], (current) => ({
   ...(current as Meme),
   title: 'A better title'
 }));`;
-
-	const typescriptExample = `const useMeme = createQuery(['memes'], async (id: number) => {
-  try {
-    return succeed(await fetchMeme(id)); // infers TData: Meme
-  } catch {
-    return fail('Could not load meme');  // infers TError: string
-  }
-});
-
-const query = useMeme(() => 7); // param must be a number
-
-query.data;  // Meme | undefined
-query.error; // string | undefined`;
 </script>
 
 <script lang="ts">
 	import CodeBlock from './demos/CodeBlock.svelte';
 </script>
 
-<h3 id="api-typescript">TypeScript</h3>
-
-<p>
-	The library is written in TypeScript and designed for inference: annotate the
-	loading function's parameter, and everything else follows. The data type flows
-	from what you <code>succeed</code> with, the error type from what you
-	<code>fail</code> with, and both arrive fully typed on the query state — in everyday
-	use you never write a generic.
-</p>
-
-<CodeBlock code={typescriptExample} />
-
-<p>Where the types are specific on purpose:</p>
-
-<ul>
-	<li>
-		<strong>Errors are typed values.</strong> Because loading functions return
-		errors instead of throwing them, <code>query.error</code> is your
-		<code>TError</code> — not the <code>unknown</code> of a catch block.
-	</li>
-	<li>
-		<strong>TError comes first in the generics list.</strong>
-		The error type is the one you most often want to pin down explicitly (e.g. to
-		a shared <code>ApiError</code>), so it can be given without spelling out the
-		rest: <code>createQuery&lt;ApiError&gt;(key, loadFn)</code>
-		— param and data are still inferred.
-	</li>
-	<li>
-		<strong>initialData narrows data.</strong>
-		When it is provided, an overload types <code>query.data</code> as
-		<code>TData</code> instead of <code>TData | undefined</code>.
-	</li>
-	<li>
-		<strong>Params must be serializable.</strong> The parameter type is
-		constrained to <code>QueryParam</code> — passing something that cannot become
-		part of a cache key is a type error, not a silent bug.
-	</li>
-</ul>
+<h3 id="api-types">Types</h3>
 
 <p>
 	These are the exported types that the reference below is written in. Whenever
 	one of them appears in a signature, you can
-	<strong>hover it</strong> to see its definition again (or click it to come back
-	here):
+	<strong>hover it</strong> to see its definition again (or click it to come
+	back here). How the types are inferred is explained in
+	<a href="#typescript">TypeScript</a>.
 </p>
 
 <CodeBlock code={typesBlock} />
@@ -268,6 +246,16 @@ query.error; // string | undefined`;
 					Backoff is exponential: 1s, 2s, 4s, … capped at 30s. Retrying is
 					invisible — the query stays in its loading state and only the final
 					result lands.
+				</td>
+			</tr>
+			<tr>
+				<td>meta</td>
+				<td>none</td>
+				<td>
+					Derives metadata from the parameter, e.g. the period or the groups the
+					data belongs to. It is stored with each cache entry and passed to the
+					predicate of <code>invalidateQueriesWhere</code>, so queries can be
+					invalidated based on what they contain instead of their key.
 				</td>
 			</tr>
 		</tbody>
@@ -405,7 +393,8 @@ query.error; // string | undefined`;
 <CodeBlock code={sequentialType} types={TYPE_DEFS} />
 
 <p>
-	The cursor-based sibling of <code>createQuery</code> for pagination. In practice:
+	The cursor-based sibling of <code>createQuery</code>, for load-more lists. In
+	practice:
 </p>
 
 <CodeBlock code={sequentialSig} />
@@ -465,16 +454,54 @@ query.error; // string | undefined`;
 
 <CodeBlock code={invalidateType} />
 
+<p>
+	Invalidates all queries whose key starts with the given key. Invalidated
+	queries are marked stale, and the <strong>active</strong> ones (used in a
+	mounted component) reload immediately — deduplicated, so a query used by five
+	components loads once. With <code>exact: true</code>, only the query with
+	exactly this key is invalidated. With <code>force: true</code>, all cached
+	state (data, errors, timestamps) is forgotten immediately instead of being
+	kept while reloading.
+</p>
+
 <CodeBlock code={invalidateExample} />
 
 <p>
-	Invalidated queries are marked stale, and the <strong>active</strong> ones
-	(used in a mounted component) reload immediately — deduplicated, so a query
-	used by five components loads once. If a matching query is loading at that
-	moment, the in-flight load is cancelled and a fresh one starts, so responses
-	that predate the invalidation are never stored. With
-	<code>force: true</code>, all cached state (data, errors, timestamps) is
-	forgotten immediately instead of being kept while reloading.
+	If a matching query is loading at that moment, the in-flight load is cancelled
+	and a fresh one starts, so responses that predate the invalidation are never
+	stored.
+</p>
+
+<h3 id="api-invalidate-where">invalidateQueriesWhere</h3>
+
+<CodeBlock code={invalidateWhereType} types={TYPE_DEFS} />
+
+<p>
+	Invalidates all cached queries for which the predicate returns
+	<code>true</code>, with the same effects as <code>invalidateQueries</code>
+	(including <code>force</code>). Use it when the key cannot express which
+	queries are affected: queries describe their data with the
+	<code>meta</code> option, which derives metadata from their parameter, and the
+	predicate receives the key and the meta of each cache entry.
+</p>
+
+<CodeBlock code={invalidateWhereExample} />
+
+<p>
+	Both queries hold data for a day, but under different keys. With
+	<code>invalidateQueries</code>, you would have to know and list every affected
+	key; with <code>meta</code>, one call reaches all queries for that day.
+</p>
+
+<p>
+	The predicate is called once per cache entry, before anything is invalidated.
+	If it throws for an entry, that entry is not invalidated. It sees the entries
+	of all queries, so <code>meta</code> may be missing (for queries without the
+	option) or have a different shape. That is why it is typed as
+	<code>Record&lt;string, unknown&gt; | undefined</code> and read defensively,
+	as
+	<code>entry.meta?.day === change.day</code> does. To catch mistakes where the
+	meta is created, check it against your own type with <code>satisfies</code>.
 </p>
 
 <h3 id="api-update">

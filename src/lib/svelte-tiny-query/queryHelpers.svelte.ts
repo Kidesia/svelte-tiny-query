@@ -10,7 +10,8 @@ import {
 	evictionTimerByKey,
 	abortControllerByKey,
 	cursorByKey,
-	hasMoreByKey
+	hasMoreByKey,
+	metaByKey
 } from './cache.svelte';
 import type { LoadResult } from './loadHelpers.js';
 import { generateCacheKey } from './utils.js';
@@ -110,6 +111,24 @@ function evictIfUnusedAndStale(cacheKey: string, gcTime: number) {
 	delete staleTimeStampByKey[cacheKey];
 	delete cursorByKey[cacheKey];
 	delete hasMoreByKey[cacheKey];
+	delete metaByKey[cacheKey];
+}
+
+// Stores the meta of a cache entry. It is derived once, from the same param
+// as the entry's loader, so that it always describes the cached data.
+// A throwing meta function is a defect: the entry is stored without meta.
+export function storeMeta(cacheKey: string, deriveMeta: () => object) {
+	untrack(() => {
+		try {
+			metaByKey[cacheKey] = deriveMeta() as Record<string, unknown>;
+		} catch (defect) {
+			console.error(
+				`svelte-tiny-query (${cacheKey}): the meta function threw. ` +
+					'The query is cached without meta.'
+			);
+			reportDefect(defect);
+		}
+	});
 }
 
 export async function withLoading<TData, TError>(
@@ -192,7 +211,7 @@ export async function withLoading<TData, TError>(
 
 // Surfaces a defect as an uncaught error (window.onerror and friends),
 // so error monitoring tools see it without the query getting stuck
-function reportDefect(defect: unknown) {
+export function reportDefect(defect: unknown) {
 	if (typeof reportError === 'function') {
 		reportError(defect);
 	} else {

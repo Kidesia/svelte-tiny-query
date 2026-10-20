@@ -20,7 +20,8 @@ import {
 import {
 	warnIfTracking,
 	trackActiveQueriesCount,
-	withLoading
+	withLoading,
+	storeMeta
 } from './queryHelpers.svelte';
 
 // Types
@@ -81,6 +82,7 @@ export function createSequentialQuery<
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -104,6 +106,7 @@ export function createSequentialQuery<
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -127,6 +130,7 @@ export function createSequentialQuery<
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -190,6 +194,11 @@ export function createSequentialQuery<
 
 				// Create and store the query loader if it doesn't exist
 				if (!queryLoaderByKey[cacheKey]) {
+					const deriveMeta = options?.meta;
+					if (deriveMeta) {
+						storeMeta(cacheKey, () => deriveMeta(frozenQueryParam));
+					}
+
 					const queryLoaderWithParam = async (mode?: QueryLoadMode) => {
 						withLoading(
 							cacheKey,

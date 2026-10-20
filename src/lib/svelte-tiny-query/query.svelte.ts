@@ -5,7 +5,8 @@ import { generateCacheKey, normalizeParam, type QueryParam } from './utils.js';
 import {
 	warnIfTracking,
 	trackActiveQueriesCount,
-	withLoading
+	withLoading,
+	storeMeta
 } from './queryHelpers.svelte';
 import {
 	queryLoaderByKey,
@@ -95,6 +96,11 @@ export function createQuery<
 		 * Defaults to 0 (no retries).
 		 */
 		retry?: number;
+		/**
+		 * Derives metadata from the query parameter. It is stored with each
+		 * cache entry and passed to the predicate of `invalidateQueriesWhere`.
+		 */
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -149,6 +155,11 @@ export function createQuery<
 		 * Defaults to 0 (no retries).
 		 */
 		retry?: number;
+		/**
+		 * Derives metadata from the query parameter. It is stored with each
+		 * cache entry and passed to the predicate of `invalidateQueriesWhere`.
+		 */
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -166,6 +177,7 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 		staleTime?: number;
 		gcTime?: number;
 		retry?: number;
+		meta?: (queryParam: TParam) => object;
 	}
 ): (
 	param?: TParam | (() => TParam),
@@ -201,6 +213,11 @@ export function createQuery<TData, TError, TParam extends QueryParam = void>(
 			internalState.currentKey = cacheKey;
 
 			if (!queryLoaderByKey[cacheKey]) {
+				const deriveMeta = options?.meta;
+				if (deriveMeta) {
+					storeMeta(cacheKey, () => deriveMeta(frozenParam));
+				}
+
 				// Create and store the query loader if it doesn't exist
 				queryLoaderByKey[cacheKey] = async () => {
 					untrack(() => {

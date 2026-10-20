@@ -21,6 +21,29 @@
 
 	let menuOpen = $state(false);
 
+	const invalidationCode = `// by key: the memes list and every single meme
+invalidateQueries(['memes']);
+
+// by meta: every query that holds data for a day, whatever its key
+const useDayPlan = createQuery(['day-plan'], loadDayPlan, {
+  meta: (day) => ({ day })
+});
+
+invalidateQueriesWhere((entry) => entry.meta?.day === '2026-10-19');`;
+
+	const typescriptExample = `const useMeme = createQuery(['memes'], async (id: number) => {
+  try {
+    return succeed(await fetchMeme(id)); // infers TData: Meme
+  } catch {
+    return fail('Could not load meme');  // infers TError: string
+  }
+});
+
+const query = useMeme(() => 7); // param must be a number
+
+query.data;  // Meme | undefined
+query.error; // string | undefined`;
+
 	const ruleCode = `// ✅ invoke at the top level of the component
 const query = useMeme(() => id);
 
@@ -77,21 +100,24 @@ const { data, loading } = $derived(query);`;
 		<a href="#first-query">Your first query</a>
 		<a href="#params">Reactive parameters</a>
 		<a href="#mutations">Mutations</a>
+		<a href="#invalidation">Invalidation</a>
 		<a href="#enabled">Dependent queries</a>
 		<a href="#retry">Errors and retries</a>
 		<a href="#sequential">Sequential queries</a>
 		<a href="#cancellation">Cancellation</a>
 		<a href="#cache">Cache &amp; GC</a>
 		<a href="#the-rule">The one rule</a>
+		<a href="#typescript">TypeScript</a>
 		<span class="group">About</span>
 		<a href="#why">Why this library?</a>
 		<a href="#omissions">What is left out</a>
 		<a href="#differences">vs TanStack Query</a>
 		<span class="group">Reference</span>
-		<a href="#api-typescript">TypeScript</a>
+		<a href="#api-types">Types</a>
 		<a href="#api-createquery">createQuery</a>
 		<a href="#api-sequential">createSequentialQuery</a>
 		<a href="#api-invalidate">invalidateQueries</a>
+		<a href="#api-invalidate-where">invalidateQueriesWhere</a>
 		<a href="#api-update">updateQueryData</a>
 		<a href="#api-queryinfos">queryInfos</a>
 		<span class="group">Links</span>
@@ -227,6 +253,37 @@ const { data, loading } = $derived(query);`;
 			</p>
 		</section>
 
+		<section id="invalidation" style="--tint: var(--lavender)">
+			<h2>Invalidation</h2>
+			<p>
+				Invalidating a query marks its cached data as stale. Active queries
+				(used in a mounted component) reload right away, the others reload when
+				they are used again. There are two ways to choose what to invalidate:
+			</p>
+			<ul>
+				<li>
+					<strong>By key</strong>, with <code>invalidateQueries</code>: all
+					queries whose key starts with the given key. Keys are hierarchical, so
+					<code>['memes']</code> also hits <code>['memes', '7']</code>. This is
+					what most mutations need.
+				</li>
+				<li>
+					<strong>By meta</strong>, with <code>invalidateQueriesWhere</code>:
+					all queries for which a predicate returns <code>true</code>. Queries
+					describe their data with the <code>meta</code> option, e.g. the day it
+					belongs to, so a single call can reach queries with different keys — for
+					example when the server reports that something changed on a day.
+				</li>
+			</ul>
+			<CodeBlock code={invalidationCode} />
+			<p>
+				Both cancel in-flight loads of the matching queries, so a response that
+				predates the invalidation is never stored, and both accept
+				<code>force</code> to drop the cached data right away. The
+				<a href="#api-invalidate">API reference</a> has the details.
+			</p>
+		</section>
+
 		<section id="enabled" style="--tint: var(--peach)">
 			<h2>Dependent queries</h2>
 			<p>
@@ -292,10 +349,11 @@ const { data, loading } = $derived(query);`;
 			<h2>Sequential queries</h2>
 			<p>
 				<code>createSequentialQuery</code> is the cursor-based sibling of
-				<code>createQuery</code>, for pagination and load-more lists. The
-				loading function receives a cursor and returns one page plus the next
-				cursor — returning <code>undefined</code> means there is no more data.
-				The pages accumulate in <code>data</code>, an array of pages.
+				<code>createQuery</code>, for load-more lists. The loading function
+				receives a cursor and returns one page plus the next cursor — returning
+				<code>undefined</code>
+				means there is no more data. The pages accumulate in <code>data</code>,
+				an array of pages.
 			</p>
 			<div class="demo-grid">
 				<div class="demo-card">
@@ -357,7 +415,10 @@ const { data, loading } = $derived(query);`;
 				<li>it is first used (unless fresh cached data exists),</li>
 				<li>its key changes, via a reactive parameter,</li>
 				<li>it is used again (e.g. remounted) and its data is stale,</li>
-				<li>it is invalidated via <code>invalidateQueries</code>,</li>
+				<li>
+					it is invalidated via <code>invalidateQueries</code> or
+					<code>invalidateQueriesWhere</code>,
+				</li>
 				<li>its <code>reload</code> function is called.</li>
 			</ul>
 			<p>
@@ -431,6 +492,46 @@ const { data, loading } = $derived(query);`;
 			</p>
 		</section>
 
+		<section id="typescript" style="--tint: var(--pink)">
+			<h2>TypeScript</h2>
+			<p>
+				The library is written in TypeScript and designed for inference:
+				annotate the loading function's parameter, and everything else follows.
+				The data type flows from what you <code>succeed</code> with, the error
+				type from what you
+				<code>fail</code> with, and both arrive fully typed on the query state —
+				in everyday use you never write a generic.
+			</p>
+			<CodeBlock code={typescriptExample} />
+			<p>Where the types are specific on purpose:</p>
+			<ul>
+				<li>
+					<strong>Errors are typed values.</strong> Because loading functions
+					return errors instead of throwing them, <code>query.error</code> is
+					your
+					<code>TError</code> — not the <code>unknown</code> of a catch block.
+				</li>
+				<li>
+					<strong>TError comes first in the generics list.</strong>
+					The error type is the one you most often want to pin down explicitly (e.g.
+					to a shared <code>ApiError</code>), so it can be given without
+					spelling out the rest:
+					<code>createQuery&lt;ApiError&gt;(key, loadFn)</code>
+					— param and data are still inferred.
+				</li>
+				<li>
+					<strong>initialData narrows data.</strong>
+					When it is provided, an overload types <code>query.data</code> as
+					<code>TData</code> instead of <code>TData | undefined</code>.
+				</li>
+				<li>
+					<strong>Params must be serializable.</strong> The parameter type is
+					constrained to <code>QueryParam</code> — passing something that cannot
+					become part of a cache key is a type error, not a silent bug.
+				</li>
+			</ul>
+		</section>
+
 		<section id="why" style="--tint: var(--mint)">
 			<h2>Why this library?</h2>
 			<p>
@@ -456,10 +557,9 @@ const { data, loading } = $derived(query);`;
 			<p>
 				Version 1.0 of Svelte Tiny Query was designed and written entirely by
 				hand, before AI assistance was part of our workflow. Since then, AI has
-				assisted the development — hunting edge cases, writing regression tests
-				and helping with fixes and features — while the design and direction of
-				the library remain human decisions. This docs page was also built with
-				the help of AI.
+				assisted the development, while the design and direction of the library
+				remain human decisions. This docs page was also built with the help of
+				AI.
 			</p>
 		</section>
 
@@ -579,8 +679,8 @@ const { data, loading } = $derived(query);`;
 		<section id="api" style="--tint: var(--lavender)">
 			<h2>API Reference</h2>
 			<p>
-				The whole library: two query constructors, two cache tools, two helpers
-				and one readonly object. This is everything.
+				The whole library: two query constructors, three cache tools, two
+				helpers and one readonly object. This is everything.
 			</p>
 			<ApiReference />
 		</section>
