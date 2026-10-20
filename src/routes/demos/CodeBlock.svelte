@@ -36,7 +36,7 @@
 			const isKnownType =
 				linkTypes && tokenClass === 'tok-typename' && types?.[match[0]];
 			html += isKnownType
-				? `<a class="tok-type" href="#api-typescript" data-type="${match[0]}">${match[0]}</a>`
+				? `<a class="tok-type" href="#api-types" data-type="${match[0]}">${match[0]}</a>`
 				: `<span class="${tokenClass}">${escapeHtml(match[0])}</span>`;
 			lastIndex = match.index + match[0].length;
 		}

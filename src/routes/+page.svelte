@@ -31,6 +31,19 @@ const useDayPlan = createQuery(['day-plan'], loadDayPlan, {
 
 invalidateQueriesWhere((entry) => entry.meta?.day === '2026-10-19');`;
 
+	const typescriptExample = `const useMeme = createQuery(['memes'], async (id: number) => {
+  try {
+    return succeed(await fetchMeme(id)); // infers TData: Meme
+  } catch {
+    return fail('Could not load meme');  // infers TError: string
+  }
+});
+
+const query = useMeme(() => 7); // param must be a number
+
+query.data;  // Meme | undefined
+query.error; // string | undefined`;
+
 	const ruleCode = `// ✅ invoke at the top level of the component
 const query = useMeme(() => id);
 
@@ -94,12 +107,13 @@ const { data, loading } = $derived(query);`;
 		<a href="#cancellation">Cancellation</a>
 		<a href="#cache">Cache &amp; GC</a>
 		<a href="#the-rule">The one rule</a>
+		<a href="#typescript">TypeScript</a>
 		<span class="group">About</span>
 		<a href="#why">Why this library?</a>
 		<a href="#omissions">What is left out</a>
 		<a href="#differences">vs TanStack Query</a>
 		<span class="group">Reference</span>
-		<a href="#api-typescript">TypeScript</a>
+		<a href="#api-types">Types</a>
 		<a href="#api-createquery">createQuery</a>
 		<a href="#api-sequential">createSequentialQuery</a>
 		<a href="#api-invalidate">invalidateQueries</a>
@@ -478,6 +492,46 @@ const { data, loading } = $derived(query);`;
 			</p>
 		</section>
 
+		<section id="typescript" style="--tint: var(--pink)">
+			<h2>TypeScript</h2>
+			<p>
+				The library is written in TypeScript and designed for inference:
+				annotate the loading function's parameter, and everything else follows.
+				The data type flows from what you <code>succeed</code> with, the error
+				type from what you
+				<code>fail</code> with, and both arrive fully typed on the query state —
+				in everyday use you never write a generic.
+			</p>
+			<CodeBlock code={typescriptExample} />
+			<p>Where the types are specific on purpose:</p>
+			<ul>
+				<li>
+					<strong>Errors are typed values.</strong> Because loading functions
+					return errors instead of throwing them, <code>query.error</code> is
+					your
+					<code>TError</code> — not the <code>unknown</code> of a catch block.
+				</li>
+				<li>
+					<strong>TError comes first in the generics list.</strong>
+					The error type is the one you most often want to pin down explicitly (e.g.
+					to a shared <code>ApiError</code>), so it can be given without
+					spelling out the rest:
+					<code>createQuery&lt;ApiError&gt;(key, loadFn)</code>
+					— param and data are still inferred.
+				</li>
+				<li>
+					<strong>initialData narrows data.</strong>
+					When it is provided, an overload types <code>query.data</code> as
+					<code>TData</code> instead of <code>TData | undefined</code>.
+				</li>
+				<li>
+					<strong>Params must be serializable.</strong> The parameter type is
+					constrained to <code>QueryParam</code> — passing something that cannot
+					become part of a cache key is a type error, not a silent bug.
+				</li>
+			</ul>
+		</section>
+
 		<section id="why" style="--tint: var(--mint)">
 			<h2>Why this library?</h2>
 			<p>
@@ -503,10 +557,9 @@ const { data, loading } = $derived(query);`;
 			<p>
 				Version 1.0 of Svelte Tiny Query was designed and written entirely by
 				hand, before AI assistance was part of our workflow. Since then, AI has
-				assisted the development — hunting edge cases, writing regression tests
-				and helping with fixes and features — while the design and direction of
-				the library remain human decisions. This docs page was also built with
-				the help of AI.
+				assisted the development, while the design and direction of the library
+				remain human decisions. This docs page was also built with the help of
+				AI.
 			</p>
 		</section>
 

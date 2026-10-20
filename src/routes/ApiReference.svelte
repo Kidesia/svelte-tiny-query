@@ -169,69 +169,20 @@ invalidateQueriesWhere((entry) => entry.meta?.day === change.day);`;
   ...(current as Meme),
   title: 'A better title'
 }));`;
-
-	const typescriptExample = `const useMeme = createQuery(['memes'], async (id: number) => {
-  try {
-    return succeed(await fetchMeme(id)); // infers TData: Meme
-  } catch {
-    return fail('Could not load meme');  // infers TError: string
-  }
-});
-
-const query = useMeme(() => 7); // param must be a number
-
-query.data;  // Meme | undefined
-query.error; // string | undefined`;
 </script>
 
 <script lang="ts">
 	import CodeBlock from './demos/CodeBlock.svelte';
 </script>
 
-<h3 id="api-typescript">TypeScript</h3>
-
-<p>
-	The library is written in TypeScript and designed for inference: annotate the
-	loading function's parameter, and everything else follows. The data type flows
-	from what you <code>succeed</code> with, the error type from what you
-	<code>fail</code> with, and both arrive fully typed on the query state — in everyday
-	use you never write a generic.
-</p>
-
-<CodeBlock code={typescriptExample} />
-
-<p>Where the types are specific on purpose:</p>
-
-<ul>
-	<li>
-		<strong>Errors are typed values.</strong> Because loading functions return
-		errors instead of throwing them, <code>query.error</code> is your
-		<code>TError</code> — not the <code>unknown</code> of a catch block.
-	</li>
-	<li>
-		<strong>TError comes first in the generics list.</strong>
-		The error type is the one you most often want to pin down explicitly (e.g. to
-		a shared <code>ApiError</code>), so it can be given without spelling out the
-		rest: <code>createQuery&lt;ApiError&gt;(key, loadFn)</code>
-		— param and data are still inferred.
-	</li>
-	<li>
-		<strong>initialData narrows data.</strong>
-		When it is provided, an overload types <code>query.data</code> as
-		<code>TData</code> instead of <code>TData | undefined</code>.
-	</li>
-	<li>
-		<strong>Params must be serializable.</strong> The parameter type is
-		constrained to <code>QueryParam</code> — passing something that cannot become
-		part of a cache key is a type error, not a silent bug.
-	</li>
-</ul>
+<h3 id="api-types">Types</h3>
 
 <p>
 	These are the exported types that the reference below is written in. Whenever
 	one of them appears in a signature, you can
-	<strong>hover it</strong> to see its definition again (or click it to come back
-	here):
+	<strong>hover it</strong> to see its definition again (or click it to come
+	back here). How the types are inferred is explained in
+	<a href="#typescript">TypeScript</a>.
 </p>
 
 <CodeBlock code={typesBlock} />
