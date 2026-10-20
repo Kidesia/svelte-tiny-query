@@ -442,7 +442,8 @@ query.error; // string | undefined`;
 <CodeBlock code={sequentialType} types={TYPE_DEFS} />
 
 <p>
-	The cursor-based sibling of <code>createQuery</code> for pagination. In practice:
+	The cursor-based sibling of <code>createQuery</code>, for load-more lists. In
+	practice:
 </p>
 
 <CodeBlock code={sequentialSig} />
@@ -502,47 +503,54 @@ query.error; // string | undefined`;
 
 <CodeBlock code={invalidateType} />
 
+<p>
+	Invalidates all queries whose key starts with the given key. Invalidated
+	queries are marked stale, and the <strong>active</strong> ones (used in a
+	mounted component) reload immediately — deduplicated, so a query used by five
+	components loads once. With <code>exact: true</code>, only the query with
+	exactly this key is invalidated. With <code>force: true</code>, all cached
+	state (data, errors, timestamps) is forgotten immediately instead of being
+	kept while reloading.
+</p>
+
 <CodeBlock code={invalidateExample} />
 
 <p>
-	Invalidated queries are marked stale, and the <strong>active</strong> ones
-	(used in a mounted component) reload immediately — deduplicated, so a query
-	used by five components loads once. If a matching query is loading at that
-	moment, the in-flight load is cancelled and a fresh one starts, so responses
-	that predate the invalidation are never stored. With
-	<code>force: true</code>, all cached state (data, errors, timestamps) is
-	forgotten immediately instead of being kept while reloading.
+	If a matching query is loading at that moment, the in-flight load is cancelled
+	and a fresh one starts, so responses that predate the invalidation are never
+	stored.
 </p>
 
 <h3 id="api-invalidate-where">invalidateQueriesWhere</h3>
 
 <CodeBlock code={invalidateWhereType} types={TYPE_DEFS} />
 
-<CodeBlock code={invalidateWhereExample} />
-
 <p>
 	Invalidates all cached queries for which the predicate returns
 	<code>true</code>, with the same effects as <code>invalidateQueries</code>
 	(including <code>force</code>). Use it when the key cannot express which
-	queries are affected. The predicate is called once per cache entry, with the
-	entry's key and the metadata derived by the query's <code>meta</code> option, before
-	anything is invalidated. If it throws for an entry, that entry is not invalidated.
+	queries are affected: queries describe their data with the
+	<code>meta</code> option, which derives metadata from their parameter, and the
+	predicate receives the key and the meta of each cache entry.
+</p>
+
+<CodeBlock code={invalidateWhereExample} />
+
+<p>
+	Both queries hold data for a day, but under different keys. With
+	<code>invalidateQueries</code>, you would have to know and list every affected
+	key; with <code>meta</code>, one call reaches all queries for that day.
 </p>
 
 <p>
-	In the example, both queries hold data for a day, but under different keys.
-	With <code>invalidateQueries</code>, you would have to know and list every
-	affected key; with <code>meta</code>, one call reaches all queries for that
-	day.
-</p>
-
-<p>
-	The predicate sees the entries of all queries, so <code>meta</code> may be
-	missing (for queries without the option) or have a different shape. That is
-	why it is typed as <code>Record&lt;string, unknown&gt; | undefined</code> and
-	read defensively, as <code>entry.meta?.day === change.day</code> does. To
-	catch mistakes where the meta is created, check it against your own type with
-	<code>satisfies</code>.
+	The predicate is called once per cache entry, before anything is invalidated.
+	If it throws for an entry, that entry is not invalidated. It sees the entries
+	of all queries, so <code>meta</code> may be missing (for queries without the
+	option) or have a different shape. That is why it is typed as
+	<code>Record&lt;string, unknown&gt; | undefined</code> and read defensively,
+	as
+	<code>entry.meta?.day === change.day</code> does. To catch mistakes where the
+	meta is created, check it against your own type with <code>satisfies</code>.
 </p>
 
 <h3 id="api-update">

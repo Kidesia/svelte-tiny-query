@@ -12,7 +12,7 @@ Check out the [**interactive docs**](https://kidesia.github.io/svelte-tiny-query
 - 🚧 Query invalidation from anywhere
 - 🔁 Retries with exponential backoff
 - 🚫 Cancellation of in-flight loads
-- 📜 Sequential queries (pagination, load-more)
+- 📜 Sequential queries (load-more)
 - 🐍 Written in TypeScript
 
 ## Usage
@@ -220,7 +220,7 @@ function createSequentialQuery<TError, TParam, TData, TCursor>(
 ) => SequentialQueryState<TData, TError>;
 ```
 
-A cursor-based query for paginated data ("load more"). The loading function receives the query parameter and the current cursor (`undefined` on the first load), and returns:
+A cursor-based query for load-more lists. The loading function receives the query parameter and the current cursor (`undefined` on the first load), and returns:
 
 - `{ success: true, data: TData, cursor: TCursor | undefined }`
 - `{ success: false, error: TError }`
